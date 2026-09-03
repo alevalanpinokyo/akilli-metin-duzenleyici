@@ -202,14 +202,19 @@ namespace AkilliMetinDuzenleyici.Services
             Action<string>? statusCallback,
             CancellationToken cancellationToken)
         {
-            string targetModel = string.IsNullOrWhiteSpace(settings.Model) ? "llama-3.3-70b-versatile" : settings.Model;
+            string[] modelFallbackChain = new[] { "llama-3.3-70b-versatile", "llama-3.1-8b-instant", "gemma2-9b-it" };
+            string targetModel = settings.Model;
+            if (string.IsNullOrWhiteSpace(targetModel) || targetModel.Contains("mixtral") || targetModel.Contains("gemini"))
+            {
+                targetModel = "llama-3.3-70b-versatile";
+            }
+
             string endpoint = string.IsNullOrWhiteSpace(settings.Endpoint) || settings.Endpoint.Contains("googleapis.com") 
                 ? "https://api.groq.com/openai/v1/chat/completions" 
                 : settings.Endpoint;
 
             int maxRetries = 3;
             int currentRetry = 0;
-            string[] modelFallbackChain = new[] { "llama-3.3-70b-versatile", "llama-3.1-8b-instant", "mixtral-8x7b-32768" };
 
             int estimatedPromptTokens = (inputText.Length / 3) + (settings.SystemPrompt?.Length / 3 ?? 500);
             int safeMaxTokens = Math.Min(3500, Math.Max(1024, estimatedPromptTokens + 500));
@@ -320,12 +325,12 @@ namespace AkilliMetinDuzenleyici.Services
                         int currentIndex = Array.IndexOf(modelFallbackChain, targetModel);
 
                         if (currentIndex >= 0 && currentIndex < modelFallbackChain.Length - 1 && 
-                            (response.StatusCode == HttpStatusCode.NotFound || errorText.Contains("model_not_found") || errorText.Contains("model_decommissioned")))
+                            (response.StatusCode == HttpStatusCode.NotFound || response.StatusCode == HttpStatusCode.BadRequest || errorText.Contains("model_not_found") || errorText.Contains("model_decommissioned") || errorText.Contains("decommissioned")))
                         {
                             targetModel = modelFallbackChain[currentIndex + 1];
                             settings.Model = targetModel;
 
-                            statusCallback?.Invoke($"Model Uyarısı. Otomatik yedek modele geçiliyor: '{targetModel}'...");
+                            statusCallback?.Invoke($"Model Uyarısı. Otomatik aktif modele geçiliyor: '{targetModel}'...");
                             await Task.Delay(500, cancellationToken);
                             continue;
                         }
