@@ -62,7 +62,7 @@ namespace AkilliMetinDuzenleyici.Services
         {
             string[] geminiModels = new[] { "gemini-2.0-flash", "gemini-1.5-flash", "gemini-2.0-flash-lite" };
             string targetModel = settings.Model;
-            if (string.IsNullOrWhiteSpace(targetModel) || targetModel.Contains("llama") || targetModel.Contains("groq"))
+            if (string.IsNullOrWhiteSpace(targetModel) || Array.IndexOf(geminiModels, targetModel) < 0)
             {
                 targetModel = "gemini-2.0-flash";
             }
@@ -155,14 +155,22 @@ namespace AkilliMetinDuzenleyici.Services
                     else
                     {
                         string errorText = await response.Content.ReadAsStringAsync(cancellationToken);
-                        int currentIndex = Array.IndexOf(geminiModels, targetModel);
+                        currentRetry++;
 
-                        if (currentIndex >= 0 && currentIndex < geminiModels.Length - 1 &&
-                            (response.StatusCode == HttpStatusCode.NotFound || response.StatusCode == HttpStatusCode.TooManyRequests || errorText.Contains("404") || errorText.Contains("NOT_FOUND")))
+                        if (currentRetry <= maxRetries && (response.StatusCode == HttpStatusCode.NotFound || response.StatusCode == HttpStatusCode.BadRequest || response.StatusCode == HttpStatusCode.TooManyRequests || errorText.Contains("404") || errorText.Contains("NOT_FOUND")))
                         {
-                            targetModel = geminiModels[currentIndex + 1];
+                            int currentIndex = Array.IndexOf(geminiModels, targetModel);
+                            if (currentIndex >= 0 && currentIndex < geminiModels.Length - 1)
+                            {
+                                targetModel = geminiModels[currentIndex + 1];
+                            }
+                            else
+                            {
+                                targetModel = "gemini-2.0-flash";
+                            }
                             settings.Model = targetModel;
-                            statusCallback?.Invoke($"Gemini Model Uyarısı (HTTP {(int)response.StatusCode}). Otomatik yedek modele geçiliyor: '{targetModel}'...");
+
+                            statusCallback?.Invoke($"Gemini Model Uyarısı. Otomatik aktif modele geçiliyor: '{targetModel}'...");
                             await Task.Delay(500, cancellationToken);
                             continue;
                         }
@@ -202,9 +210,9 @@ namespace AkilliMetinDuzenleyici.Services
             Action<string>? statusCallback,
             CancellationToken cancellationToken)
         {
-            string[] modelFallbackChain = new[] { "llama-3.3-70b-versatile", "llama-3.1-8b-instant", "gemma2-9b-it" };
+            string[] groqModels = new[] { "llama-3.3-70b-versatile", "llama-3.1-8b-instant" };
             string targetModel = settings.Model;
-            if (string.IsNullOrWhiteSpace(targetModel) || targetModel.Contains("mixtral") || targetModel.Contains("gemini"))
+            if (string.IsNullOrWhiteSpace(targetModel) || Array.IndexOf(groqModels, targetModel) < 0)
             {
                 targetModel = "llama-3.3-70b-versatile";
             }
@@ -294,16 +302,17 @@ namespace AkilliMetinDuzenleyici.Services
                     else if (response.StatusCode == HttpStatusCode.TooManyRequests || response.StatusCode == HttpStatusCode.RequestEntityTooLarge)
                     {
                         currentRetry++;
-                        int currentIndex = Array.IndexOf(modelFallbackChain, targetModel);
+                        int currentIndex = Array.IndexOf(groqModels, targetModel);
 
-                        if (currentIndex >= 0 && currentIndex < modelFallbackChain.Length - 1)
+                        if (currentIndex >= 0 && currentIndex < groqModels.Length - 1)
                         {
-                            targetModel = modelFallbackChain[currentIndex + 1];
-                            settings.Model = targetModel;
-                            statusCallback?.Invoke($"Groq Limiti (HTTP {(int)response.StatusCode})! Otomatik yedek modele geçiliyor: '{targetModel}'...");
-                            await Task.Delay(1000, cancellationToken);
-                            continue;
+                            targetModel = groqModels[currentIndex + 1];
                         }
+                        else
+                        {
+                            targetModel = "llama-3.1-8b-instant";
+                        }
+                        settings.Model = targetModel;
 
                         if (currentRetry > maxRetries)
                         {
@@ -314,20 +323,27 @@ namespace AkilliMetinDuzenleyici.Services
                             };
                         }
 
-                        int delaySeconds = 4 * currentRetry;
-                        statusCallback?.Invoke($"Groq limit uyarısı. {delaySeconds} saniye beklenip yeniden denenecek...");
+                        int delaySeconds = 3 * currentRetry;
+                        statusCallback?.Invoke($"Groq limit uyarısı. {delaySeconds} saniye beklenip '{targetModel}' ile deneniyor...");
                         await Task.Delay(TimeSpan.FromSeconds(delaySeconds), cancellationToken);
                         continue;
                     }
                     else
                     {
                         string errorText = await response.Content.ReadAsStringAsync(cancellationToken);
-                        int currentIndex = Array.IndexOf(modelFallbackChain, targetModel);
+                        currentRetry++;
 
-                        if (currentIndex >= 0 && currentIndex < modelFallbackChain.Length - 1 && 
-                            (response.StatusCode == HttpStatusCode.NotFound || response.StatusCode == HttpStatusCode.BadRequest || errorText.Contains("model_not_found") || errorText.Contains("model_decommissioned") || errorText.Contains("decommissioned")))
+                        if (currentRetry <= maxRetries && (response.StatusCode == HttpStatusCode.NotFound || response.StatusCode == HttpStatusCode.BadRequest || errorText.Contains("model_not_found") || errorText.Contains("model_decommissioned") || errorText.Contains("decommissioned")))
                         {
-                            targetModel = modelFallbackChain[currentIndex + 1];
+                            int currentIndex = Array.IndexOf(groqModels, targetModel);
+                            if (currentIndex >= 0 && currentIndex < groqModels.Length - 1)
+                            {
+                                targetModel = groqModels[currentIndex + 1];
+                            }
+                            else
+                            {
+                                targetModel = "llama-3.3-70b-versatile";
+                            }
                             settings.Model = targetModel;
 
                             statusCallback?.Invoke($"Model Uyarısı. Otomatik aktif modele geçiliyor: '{targetModel}'...");
