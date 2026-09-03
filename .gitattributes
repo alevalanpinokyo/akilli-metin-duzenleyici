@@ -1,0 +1,9 @@
+# Preserve binary and file integrity for Blazor WASM static assets
+*.wasm binary
+*.dll binary
+*.dat binary
+*.blat binary
+*.br binary
+*.gz binary
+*.js text eol=lf
+*.json text eol=lf
