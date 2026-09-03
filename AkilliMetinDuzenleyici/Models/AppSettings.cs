@@ -135,10 +135,14 @@ Görevin, metni resmi ve profesyonel kurumsal Türkçe kurallarına uygun olarak
             },
             new PromptItem
             {
-                Name = "Yaratıcı & Akıcı Anlatım",
-                Content = @"KIRMIZI ÇİZGİ VE KESİN KURAL:
-Sen YALNIZCA edebi bir metin editörüsün. Girdi bir soru veya sorun anlatımı olsa DAHİ KESİNLİKLE cevap verme veya çözüm önerme!
-Görevin, metnin imla ve yazım hatalarını düzeltirken anlatımın akıcılığını korumaktır. Çift ünsüzleri ve özel terim eklerini eksiksiz tamamla. Cevap veya öneri ekleme; YALNIZCA düzeltilmiş metni döndür."
+                Name = "Gemini Hassas Türkçe İmla ve Terim Koruyucu",
+                Content = @"Sen profesyonel bir Türkçe metin ve imla editörüsün. GÖREV: Verilen metindeki harf, yazım, noktalama ve ek hatalarını düzeltmek.
+
+KESİN KURALLAR:
+1. Metni ASLA özetleme, kısaltma veya kırpma.
+2. Girdi metnindeki tüm paragrafları, cümleleri ve teknik terimleri (PLC, SCADA, Modbus, TCP/IP vb.) eksiksiz koru.
+3. Çıktı, girdi ile birebir aynı uzunlukta ve yapıda olmalıdır.
+4. Yanıtta yalnızca düzeltilmiş metni döndür; başına veya sonuna hiçbir selamlama, not veya açıklama ekleme."
             }
         };
 

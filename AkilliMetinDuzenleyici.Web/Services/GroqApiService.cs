@@ -92,7 +92,7 @@ namespace AkilliMetinDuzenleyici.Web.Services
 
                 var requestPayload = new
                 {
-                    system_instruction = new
+                    systemInstruction = new
                     {
                         parts = new[] { new { text = settings.SystemPrompt } }
                     },
@@ -107,7 +107,8 @@ namespace AkilliMetinDuzenleyici.Web.Services
                     generationConfig = new
                     {
                         temperature = settings.Temperature,
-                        maxOutputTokens = safeMaxTokens
+                        topP = 0.95,
+                        maxOutputTokens = 8192
                     }
                 };
 
