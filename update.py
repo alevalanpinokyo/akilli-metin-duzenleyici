@@ -4,6 +4,7 @@ import subprocess
 import time
 import json
 import sys
+import re
 
 def print_step(msg):
     print(f"\n======== {msg} ========")
@@ -29,8 +30,22 @@ def main():
         except Exception as e:
             print(f"Silme uyarısı: {e}")
 
-    print_step("2. BLAZOR WEBASSEMBLY DERLEME (dotnet publish without .br/.gz compression mismatch)")
-    # We pass /p:CompressBlazorUncompressedFiles=false to prevent Vercel MIME/compression conflicts
+    print_step("2. YÜKLENME VE DERLEME ZAMANI ENJEKSİYONU (Build Timestamp)")
+    now_str = time.strftime("%d.%m.%Y %H:%M:%S")
+    home_razor_path = os.path.join(workspace, "AkilliMetinDuzenleyici.Web", "Pages", "Home.razor")
+    if os.path.exists(home_razor_path):
+        with open(home_razor_path, "r", encoding="utf-8") as f:
+            content = f.read()
+        content = re.sub(
+            r'private string BuildTimestamp \{ get; set; \} = "[^"]*";',
+            f'private string BuildTimestamp {{ get; set; }} = "{now_str}";',
+            content
+        )
+        with open(home_razor_path, "w", encoding="utf-8") as f:
+            f.write(content)
+        print(f"Home.razor içerisine derleme zamanı yazıldı: {now_str}")
+
+    print_step("3. BLAZOR WEBASSEMBLY DERLEME (dotnet publish)")
     publish_cmd = (
         f'dotnet publish "{os.path.join(workspace, "AkilliMetinDuzenleyici.Web", "AkilliMetinDuzenleyici.Web.csproj")}" '
         f'-c Release -o "{dist_dir}" /p:CompressBlazorUncompressedFiles=false'
@@ -39,8 +54,7 @@ def main():
         print("Derleme başarısız oldu!")
         sys.exit(1)
 
-    print_step("3. SIKIŞTIRILMIŞ (.br/.gz) ÇAKIŞMA TEMİZLİĞİ")
-    # Delete any residual .br and .gz files so Vercel serves pure uncompressed files with proper MIME types
+    print_step("4. SIKIŞTIRILMIŞ (.br/.gz) ÇAKIŞMA TEMİZLİĞİ")
     wwwroot = os.path.join(dist_dir, "wwwroot")
     for root, dirs, files in os.walk(wwwroot):
         for file in files:
@@ -51,7 +65,7 @@ def main():
                 except Exception as e:
                     pass
 
-    print_step("4. VERCEL CONFIGURATION (vercel.json)")
+    print_step("5. VERCEL CONFIGURATION (vercel.json)")
     vercel_config = {
         "outputDirectory": "dist/wwwroot",
         "cleanUrls": True,
@@ -73,12 +87,12 @@ def main():
         json.dump(vercel_config, f, indent=2)
     print("vercel.json güncellendi.")
 
-    print_step("5. GİT VERSİYONLAMA VE PUSH")
+    print_step("6. GİT VERSİYONLAMA VE PUSH")
     version_tag = time.strftime("v1.0.%Y%m%d%H%M%S")
     run_cmd("git add .", cwd=workspace)
-    run_cmd(f'git commit -m "Automated Deploy {version_tag}: Clean static WASM release"', cwd=workspace)
+    run_cmd(f'git commit -m "Automated Deploy {version_tag}: Timestamp {now_str}"', cwd=workspace)
     if run_cmd("git push origin main", cwd=workspace):
-        print_step(f"BAŞARILI! Versiyon: {version_tag} GitHub'a Pushlandı!")
+        print_step(f"BAŞARILI! Derleme Saati: {now_str} (Versiyon: {version_tag}) GitHub'a Pushlandı!")
         print("Vercel birkaç saniye içinde bu versiyonu otomatik yayınlayacak.")
     else:
         print("Push hatası oluştu!")

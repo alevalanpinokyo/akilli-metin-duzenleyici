@@ -109,6 +109,13 @@
             <span>⚙ <strong>Çalışan Model:</strong> @(AppSettings?.Model ?? "groq/compound")</span>
         </div>
     </footer>
+
+    <!-- LARGE DEPLOYMENT TIMESTAMP BANNER -->
+    <div style="background: #24273a; border: 2px solid var(--primary-accent); border-radius: 10px; padding: 14px 20px; text-align: center; box-shadow: 0 4px 12px rgba(0,0,0,0.4);">
+        <span style="font-size: 1.25rem; font-weight: 800; color: #a6e3a1; letter-spacing: 0.5px; display: inline-flex; align-items: center; gap: 8px;">
+            🚀 SİTE SON DERLEME &amp; YAYINLANMA SAATİ: <span style="color: #89b4fa; text-decoration: underline;">@BuildTimestamp</span>
+        </span>
+    </div>
 </div>
 
 <!-- SETTINGS MODAL -->
@@ -235,7 +242,7 @@
 
     private string NewPromptName { get; set; } = string.Empty;
     private string NewPromptContent { get; set; } = string.Empty;
-
+    private string BuildTimestamp { get; set; } = "04.09.2026 00:00:36";
     private CancellationTokenSource? _ccts;
 
     protected override void OnInitialized()
