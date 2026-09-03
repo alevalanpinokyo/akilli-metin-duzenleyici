@@ -37,17 +37,44 @@ namespace AkilliMetinDuzenleyici.Services
                 return new GroqApiResult
                 {
                     IsSuccess = false,
-                    ErrorMessage = "Groq Cloud API Key tanımlanmamış. Lütfen Ayarlar bölümünden API anahtarınızı girin."
+                    ErrorMessage = "API Key tanımlanmamış. Lütfen Ayarlar bölümünden API anahtarınızı girin."
                 };
             }
 
-            string targetModel = string.IsNullOrWhiteSpace(settings.Model) ? "llama-3.3-70b-versatile" : settings.Model;
+            string provider = (settings.Provider ?? "groq").ToLowerInvariant();
+            string endpoint = settings.Endpoint;
+            string targetModel = settings.Model;
+
+            if (provider == "gemini")
+            {
+                if (string.IsNullOrWhiteSpace(endpoint) || endpoint.Contains("groq.com"))
+                {
+                    endpoint = "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions";
+                }
+                if (string.IsNullOrWhiteSpace(targetModel) || targetModel.Contains("llama") || targetModel.Contains("groq"))
+                {
+                    targetModel = "gemini-2.0-flash";
+                }
+            }
+            else
+            {
+                if (string.IsNullOrWhiteSpace(endpoint) || endpoint.Contains("googleapis.com"))
+                {
+                    endpoint = "https://api.groq.com/openai/v1/chat/completions";
+                }
+                if (string.IsNullOrWhiteSpace(targetModel) || targetModel.Contains("gemini"))
+                {
+                    targetModel = "llama-3.3-70b-versatile";
+                }
+            }
+
             int maxRetries = 3;
             int currentRetry = 0;
 
-            string[] modelFallbackChain = new[] { "llama-3.3-70b-versatile", "llama-3.1-8b-instant", "mixtral-8x7b-32768" };
+            string[] modelFallbackChain = provider == "gemini" 
+                ? new[] { "gemini-2.0-flash", "gemini-1.5-flash", "gemini-1.5-pro" }
+                : new[] { "llama-3.3-70b-versatile", "llama-3.1-8b-instant", "mixtral-8x7b-32768" };
 
-            // Calculate safe MaxTokens to avoid HTTP 413 TPM limits
             int estimatedPromptTokens = (inputText.Length / 3) + (settings.SystemPrompt?.Length / 3 ?? 500);
             int safeMaxTokens = Math.Min(3500, Math.Max(1024, estimatedPromptTokens + 500));
 
@@ -79,11 +106,12 @@ namespace AkilliMetinDuzenleyici.Services
 
                 try
                 {
-                    using var httpRequest = new HttpRequestMessage(HttpMethod.Post, settings.Endpoint);
+                    using var httpRequest = new HttpRequestMessage(HttpMethod.Post, endpoint);
                     httpRequest.Headers.Authorization = new AuthenticationHeaderValue("Bearer", settings.ApiKey.Trim());
                     httpRequest.Content = new StringContent(jsonBody, Encoding.UTF8, "application/json");
 
-                    statusCallback?.Invoke($"Groq Cloud API'sine istek gönderiliyor ({targetModel})...");
+                    string providerName = provider == "gemini" ? "Google Gemini API" : "Groq Cloud API";
+                    statusCallback?.Invoke($"{providerName} sunucusuna istek gönderiliyor ({targetModel})...");
 
                     using var response = await HttpClient.SendAsync(httpRequest, cancellationToken);
 
@@ -133,7 +161,7 @@ namespace AkilliMetinDuzenleyici.Services
                         {
                             targetModel = modelFallbackChain[currentIndex + 1];
                             settings.Model = targetModel;
-                            statusCallback?.Invoke($"Groq Limiti (HTTP {(int)response.StatusCode})! Otomatik olarak daha hızlı yedek modele geçiliyor: '{targetModel}'...");
+                            statusCallback?.Invoke($"API Limiti (HTTP {(int)response.StatusCode})! Otomatik olarak yedek modele geçiliyor: '{targetModel}'...");
                             await Task.Delay(1000, cancellationToken);
                             continue;
                         }
@@ -171,7 +199,7 @@ namespace AkilliMetinDuzenleyici.Services
                         return new GroqApiResult
                         {
                             IsSuccess = false,
-                            ErrorMessage = $"Groq API Hatası (HTTP {(int)response.StatusCode}): {errorText}"
+                            ErrorMessage = $"API Hatası (HTTP {(int)response.StatusCode}): {errorText}"
                         };
                     }
                 }

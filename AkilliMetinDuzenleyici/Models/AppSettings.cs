@@ -5,6 +5,9 @@ namespace AkilliMetinDuzenleyici.Models
 {
     public class AppSettings
     {
+        [JsonPropertyName("provider")]
+        public string Provider { get; set; } = "groq"; // "groq" or "gemini"
+
         [JsonPropertyName("api_key")]
         public string ApiKey { get; set; } = string.Empty;
 
@@ -34,7 +37,7 @@ TEMEL DÜZELTME İLKELERİ:
 2. İMLA VE YAZIM DÜZELTMELERİ:
    - KISALTILMIŞ VE BOZUK HALK AĞZI KELİMELERİ: Konuşma dilindeki bozuk/kısaltılmış kalıpları (örn. ""bi türlü"" yerine ""bir türlü"", ""heralde"" yerine ""herhalde"") MUTLAKA eksiksiz TDK standart Türkçe karşılıklarıyla düzelt.
    - TÜRKÇE MORFOLOJİ VE EKLER: İsim köklerine yapım veya çekim eki geldiğinde oluşan ikiz ünsüzleri (örn. kökü 's' ile biten kelimelere -sız/-siz eki geldiğinde yan yana gelen çift harfleri) Türk Dil Kurumu kurallarına göre eksiksiz çift harf olarak yaz (örn. temassızlık).
-   - YABANCI İSİMLER VE ÖZEL TERİMLER: Yabancı kökenli terimlere, ürün/fonksiyon adlarına ve kısaltmalara Türkçe çekim ekleri getirilirken terimin ilk harflerini büyük yaz ve eki MUTLAKA kesme işaretiyle ayır (örn. PLC'ye, Ethernet, Switch'te, KUKA, Safe Stop'a, PROFIsafe'ten).
+   - YABANCI İSİMLER VE ÖZEL TERİMLER: Yabancı kökenli terimlere, ürün/fonksiyon adlarına ve kısaltmalara Türkçe çekim ekleri getirilerken terimin ilk harflerini büyük yaz ve eki MUTLAKA kesme işaretiyle ayır (örn. PLC'ye, Ethernet, Switch'te, KUKA, Safe Stop'a, PROFIsafe'ten).
    - TÜRKÇE DEYİM VE KALIPLAR: Kalıplaşmış Türkçe deyimleri ve birleşik fiilleri halk ağzındaki bozuk haliyle bırakma; standart sözlükteki doğru fiil/isim kalıbına uygun hale getir.
    - Soru eklerini (-mı/-mi/-mu/-mü) ve bağlaç olan ""de/da/ki"" kelimelerini mutlaka doğru ayır.
    - Türkçe karakter eksikliklerini (ş, ç, ğ, ı, ö, ü) ve düzeltme işaretlerini (â, î, û) eksiksiz tamamla.
@@ -67,7 +70,7 @@ TEMEL DÜZELTME İLKELERİ:
 2. İMLA VE YAZIM DÜZELTMELERİ:
    - KISALTILMIŞ VE BOZUK HALK AĞZI KELİMELERİ: Konuşma dilindeki bozuk/kısaltılmış kalıpları (örn. ""bi türlü"" yerine ""bir türlü"", ""heralde"" yerine ""herhalde"") MUTLAKA eksiksiz TDK standart Türkçe karşılıklarıyla düzelt.
    - TÜRKÇE MORFOLOJİ VE EKLER: İsim köklerine yapım veya çekim eki geldiğinde oluşan ikiz ünsüzleri (örn. kökü 's' ile biten kelimelere -sız/-siz eki geldiğinde yan yana gelen çift harfleri) Türk Dil Kurumu kurallarına göre eksiksiz çift harf olarak yaz (örn. temassızlık).
-   - YABANCI İSİMLER VE ÖZEL TERİMLER: Yabancı kökenli terimlere, ürün/fonksiyon adlarına ve kısaltmalara Türkçe çekim ekleri getirilirken terimin ilk harflerini büyük yaz ve eki MUTLAKA kesme işaretiyle ayır (örn. PLC'ye, Ethernet, Switch'te, KUKA, Safe Stop'a, PROFIsafe'ten).
+   - YABANCI İSİMLER VE ÖZEL TERİMLER: Yabancı kökenli terimlere, ürün/fonksiyon adlarına ve kısaltmalara Türkçe çekim ekleri getirilerken terimin ilk harflerini büyük yaz ve eki MUTLAKA kesme işaretiyle ayır (örn. PLC'ye, Ethernet, Switch'te, KUKA, Safe Stop'a, PROFIsafe'ten).
    - TÜRKÇE DEYİM VE KALIPLAR: Kalıplaşmış Türkçe deyimleri ve birleşik fiilleri halk ağzındaki bozuk haliyle bırakma; standart sözlükteki doğru fiil/isim kalıbına uygun hale getir.
    - Soru eklerini (-mı/-mi/-mu/-mü) ve bağlaç olan ""de/da/ki"" kelimelerini mutlaka doğru ayır.
    - Türkçe karakter eksikliklerini (ş, ç, ğ, ı, ö, ü) ve düzeltme işaretlerini (â, î, û) eksiksiz tamamla.

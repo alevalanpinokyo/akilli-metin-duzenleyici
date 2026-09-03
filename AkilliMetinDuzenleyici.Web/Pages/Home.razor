@@ -129,9 +129,22 @@
             </div>
 
             <div style="display: flex; flex-direction: column; gap: 14px;">
+                <!-- Provider Select -->
+                <div>
+                    <label style="font-weight: 600; display: block; margin-bottom: 4px;">AI Sağlayıcısı (Provider):</label>
+                    <select class="form-select" style="width: 100%; padding: 8px; border-radius: 6px; background: var(--card-bg); color: var(--text-primary); border: 1px solid var(--border-color);" 
+                            value="@(TempSettings.Provider ?? "groq")" 
+                            @onchange="OnProviderChanged">
+                        <option value="groq">⚡ Groq Cloud (Llama 3.3 70B - Çok Hızlı)</option>
+                        <option value="gemini">✨ Google Gemini API (Gemini 2.0 Flash - Ücretsiz & Yüksek Limit)</option>
+                    </select>
+                </div>
+
                 <!-- API Key Box with Masking -->
                 <div style="background: var(--card-header-bg); padding: 12px; border-radius: 8px; border: 1px solid var(--border-color)">
-                    <label style="font-weight: 600; display: block; margin-bottom: 6px;">🔑 Groq API Key:</label>
+                    <label style="font-weight: 600; display: block; margin-bottom: 6px;">
+                        🔑 @((TempSettings.Provider == "gemini") ? "Google Gemini API Key:" : "Groq API Key:")
+                    </label>
                     <div style="display: flex; gap: 8px;">
                         <input type="@(IsApiKeyVisible ? "text" : "password")" class="form-input" style="flex: 1;" @bind="TempSettings.ApiKey" />
                         <button class="btn" @onclick="() => IsApiKeyVisible = !IsApiKeyVisible">
@@ -139,7 +152,7 @@
                         </button>
                     </div>
                     <span style="font-size: 0.75rem; color: var(--text-secondary); display: block; margin-top: 4px;">
-                        🔒 API anahtarınız tarayıcınızın kendi hafızasında saklanır.
+                        🔒 API anahtarınız doğrudan tarayıcınızın kendi yerel hafızasında saklanır.
                     </span>
                 </div>
 
@@ -242,7 +255,7 @@
 
     private string NewPromptName { get; set; } = string.Empty;
     private string NewPromptContent { get; set; } = string.Empty;
-    private string BuildTimestamp { get; set; } = "04.09.2026 00:39:17";
+    private string BuildTimestamp { get; set; } = "04.09.2026 00:49:19";
     private CancellationTokenSource? _ccts;
 
     protected override void OnInitialized()
@@ -428,6 +441,7 @@
     {
         TempSettings = new AppSettings
         {
+            Provider = AppSettings.Provider ?? "groq",
             ApiKey = AppSettings.ApiKey,
             Endpoint = AppSettings.Endpoint,
             Model = AppSettings.Model,
@@ -441,6 +455,22 @@
         TempSavedPrompts = AppSettings.SavedPrompts?.Select(x => new PromptItem { Name = x.Name, Content = x.Content }).ToList() ?? new();
         TempSelectedPrompt = TempSavedPrompts.FirstOrDefault(p => p.Name == TempSettings.SelectedPromptName) ?? TempSavedPrompts.FirstOrDefault();
         ShowSettingsModal = true;
+    }
+
+    private void OnProviderChanged(ChangeEventArgs e)
+    {
+        string p = e.Value?.ToString() ?? "groq";
+        TempSettings.Provider = p;
+        if (p == "gemini")
+        {
+            TempSettings.Endpoint = "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions";
+            TempSettings.Model = "gemini-2.0-flash";
+        }
+        else
+        {
+            TempSettings.Endpoint = "https://api.groq.com/openai/v1/chat/completions";
+            TempSettings.Model = "llama-3.3-70b-versatile";
+        }
     }
 
     private void CloseSettingsModal() => ShowSettingsModal = false;
