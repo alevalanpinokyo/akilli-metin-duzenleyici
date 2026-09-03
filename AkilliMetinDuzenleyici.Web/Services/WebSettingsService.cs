@@ -75,13 +75,17 @@ namespace AkilliMetinDuzenleyici.Web.Services
 
             if (settings.Provider == "gemini")
             {
+                if (string.IsNullOrWhiteSpace(settings.ApiKey))
+                {
+                    settings.ApiKey = "AIzaSyCbglc_iOFvDx1qBo8kPVs116XWGFZTE4s";
+                }
                 if (string.IsNullOrWhiteSpace(settings.Endpoint) || settings.Endpoint.Contains("groq.com"))
                 {
-                    settings.Endpoint = "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions";
+                    settings.Endpoint = "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent";
                 }
-                if (string.IsNullOrWhiteSpace(settings.Model) || !settings.Model.Contains("gemini"))
+                if (string.IsNullOrWhiteSpace(settings.Model) || settings.Model.Contains("llama") || settings.Model.Contains("groq") || settings.Model.Contains("qwen"))
                 {
-                    settings.Model = "gemini-2.0-flash";
+                    settings.Model = "gemini-3.6-flash";
                 }
             }
             else // groq

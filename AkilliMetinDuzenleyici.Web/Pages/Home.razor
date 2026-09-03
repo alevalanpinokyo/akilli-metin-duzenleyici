@@ -135,8 +135,8 @@
                     <select class="form-select" style="width: 100%; padding: 8px; border-radius: 6px; background: var(--card-bg); color: var(--text-primary); border: 1px solid var(--border-color);" 
                             value="@(TempSettings.Provider ?? "groq")" 
                             @onchange="OnProviderChanged">
-                        <option value="groq">⚡ Groq Cloud (Llama 3.3 70B - Çok Hızlı)</option>
-                        <option value="gemini">✨ Google Gemini API (Gemini 2.0 Flash - Ücretsiz & Yüksek Limit)</option>
+                        <option value="groq">⚡ Groq Cloud (Qwen 27B / Llama 3.3 70B)</option>
+                        <option value="gemini">✨ Google Gemini API (gemini-3.6-flash)</option>
                     </select>
                 </div>
 
@@ -255,7 +255,7 @@
 
     private string NewPromptName { get; set; } = string.Empty;
     private string NewPromptContent { get; set; } = string.Empty;
-    private string BuildTimestamp { get; set; } = "04.09.2026 01:08:55";
+    private string BuildTimestamp { get; set; } = "04.09.2026 01:18:13";
     private CancellationTokenSource? _ccts;
 
     protected override void OnInitialized()
@@ -463,13 +463,14 @@
         TempSettings.Provider = p;
         if (p == "gemini")
         {
-            TempSettings.Endpoint = "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions";
-            TempSettings.Model = "gemini-2.0-flash";
+            TempSettings.Endpoint = "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent";
+            TempSettings.Model = "gemini-3.6-flash";
+            TempSettings.ApiKey = "AIzaSyCbglc_iOFvDx1qBo8kPVs116XWGFZTE4s";
         }
         else
         {
             TempSettings.Endpoint = "https://api.groq.com/openai/v1/chat/completions";
-            TempSettings.Model = "llama-3.3-70b-versatile";
+            TempSettings.Model = "qwen/qwen3.8-27b";
         }
     }
 
