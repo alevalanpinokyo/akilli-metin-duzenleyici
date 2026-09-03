@@ -83,11 +83,11 @@ namespace AkilliMetinDuzenleyici.Services
                 {
                     settings.ApiKey = "AIzaSyCbglc_iOFvDx1qBo8kPVs116XWGFZTE4s";
                 }
-                if (string.IsNullOrWhiteSpace(settings.Endpoint) || settings.Endpoint.Contains("groq.com"))
+                if (string.IsNullOrWhiteSpace(settings.Endpoint) || settings.Endpoint.Contains("groq.com") || settings.Endpoint.Contains("openai"))
                 {
                     settings.Endpoint = "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent";
                 }
-                if (string.IsNullOrWhiteSpace(settings.Model) || settings.Model.Contains("llama") || settings.Model.Contains("groq") || settings.Model.Contains("qwen"))
+                if (string.IsNullOrWhiteSpace(settings.Model) || settings.Model.Contains("llama") || settings.Model.Contains("groq") || settings.Model.Contains("qwen") || settings.Model.Contains("2.0") || settings.Model.Contains("1.5"))
                 {
                     settings.Model = "gemini-3.6-flash";
                 }

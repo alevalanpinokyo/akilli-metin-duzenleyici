@@ -255,7 +255,7 @@
 
     private string NewPromptName { get; set; } = string.Empty;
     private string NewPromptContent { get; set; } = string.Empty;
-    private string BuildTimestamp { get; set; } = "04.09.2026 01:18:13";
+    private string BuildTimestamp { get; set; } = "04.09.2026 01:20:15";
     private CancellationTokenSource? _ccts;
 
     protected override void OnInitialized()
@@ -282,6 +282,18 @@
     private async Task LoadDataAsync()
     {
         AppSettings = await SettingsService.LoadSettingsAsync();
+        
+        if (AppSettings.Provider == "gemini" && AppSettings.Model != "gemini-3.6-flash")
+        {
+            AppSettings.Model = "gemini-3.6-flash";
+            AppSettings.Endpoint = "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent";
+            if (string.IsNullOrWhiteSpace(AppSettings.ApiKey))
+            {
+                AppSettings.ApiKey = "AIzaSyCbglc_iOFvDx1qBo8kPVs116XWGFZTE4s";
+            }
+            await SettingsService.SaveSettingsAsync(AppSettings);
+        }
+
         SavedPrompts = AppSettings.SavedPrompts ?? new List<PromptItem>();
         SelectedPrompt = SavedPrompts.FirstOrDefault(p => p.Name == AppSettings.SelectedPromptName) ?? SavedPrompts.FirstOrDefault();
 
