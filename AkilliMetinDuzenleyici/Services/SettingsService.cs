@@ -70,11 +70,39 @@ namespace AkilliMetinDuzenleyici.Services
         {
             if (settings == null) return;
 
+            settings.Provider = (settings.Provider?.Trim() ?? "groq").ToLowerInvariant();
             settings.ApiKey = settings.ApiKey?.Trim() ?? string.Empty;
             settings.Endpoint = settings.Endpoint?.Trim() ?? string.Empty;
             settings.Model = settings.Model?.Trim() ?? string.Empty;
             settings.SystemPrompt = settings.SystemPrompt?.Trim() ?? string.Empty;
             settings.SelectedPromptName = settings.SelectedPromptName?.Trim() ?? string.Empty;
+
+            if (settings.Provider == "gemini")
+            {
+                if (string.IsNullOrWhiteSpace(settings.Endpoint) || settings.Endpoint.Contains("groq.com"))
+                {
+                    settings.Endpoint = "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions";
+                }
+                if (string.IsNullOrWhiteSpace(settings.Model) || !settings.Model.Contains("gemini"))
+                {
+                    settings.Model = "gemini-2.0-flash";
+                }
+            }
+            else // groq
+            {
+                if (string.IsNullOrWhiteSpace(settings.Endpoint) || settings.Endpoint.Contains("googleapis.com"))
+                {
+                    settings.Endpoint = "https://api.groq.com/openai/v1/chat/completions";
+                }
+                if (string.IsNullOrWhiteSpace(settings.Model) || 
+                    settings.Model.Contains("mixtral") || 
+                    settings.Model.Contains("gemma2") || 
+                    settings.Model.Contains("compound") || 
+                    settings.Model.Contains("gpt-oss"))
+                {
+                    settings.Model = "qwen/qwen3.8-27b";
+                }
+            }
 
             if (settings.SavedPrompts != null)
             {
@@ -85,7 +113,7 @@ namespace AkilliMetinDuzenleyici.Services
                 }
             }
 
-            if (settings.MaxWordsPerChunk <= 0) settings.MaxWordsPerChunk = 2000;
+            if (settings.MaxWordsPerChunk <= 0 || settings.MaxWordsPerChunk > 1000) settings.MaxWordsPerChunk = 600;
             if (settings.DelayBetweenChunksMs < 0) settings.DelayBetweenChunksMs = 1500;
         }
 
