@@ -210,11 +210,11 @@ namespace AkilliMetinDuzenleyici.Services
             Action<string>? statusCallback,
             CancellationToken cancellationToken)
         {
-            string[] groqModels = new[] { "llama-3.3-70b-versatile", "llama-3.1-8b-instant" };
+            string[] groqModels = new[] { "qwen/qwen3.8-27b", "llama-3.3-70b-versatile", "llama-3.1-8b-instant" };
             string targetModel = settings.Model;
             if (string.IsNullOrWhiteSpace(targetModel) || Array.IndexOf(groqModels, targetModel) < 0)
             {
-                targetModel = "llama-3.3-70b-versatile";
+                targetModel = "qwen/qwen3.8-27b";
             }
 
             string endpoint = string.IsNullOrWhiteSpace(settings.Endpoint) || settings.Endpoint.Contains("googleapis.com") 

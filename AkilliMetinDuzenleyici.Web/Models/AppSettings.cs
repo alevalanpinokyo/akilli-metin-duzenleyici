@@ -15,7 +15,7 @@ namespace AkilliMetinDuzenleyici.Web.Models
         public string Endpoint { get; set; } = "https://api.groq.com/openai/v1/chat/completions";
 
         [JsonPropertyName("model")]
-        public string Model { get; set; } = "llama-3.3-70b-versatile";
+        public string Model { get; set; } = "qwen/qwen3.8-27b";
 
         [JsonPropertyName("temperature")]
         public double Temperature { get; set; } = 0.0;
