@@ -143,28 +143,59 @@
                 <!-- API Key Box with Masking -->
                 <div style="background: var(--card-header-bg); padding: 12px; border-radius: 8px; border: 1px solid var(--border-color)">
                     <label style="font-weight: 600; display: block; margin-bottom: 6px;">
-                        🔑 @((TempSettings.Provider == "gemini") ? "Google Gemini API Key:" : "Groq API Key:")
+                        🔑 @(((TempSettings.Provider ?? "groq").ToLowerInvariant() == "gemini") ? "Google Gemini API Key:" : "Groq API Key:")
                     </label>
                     <div style="display: flex; gap: 8px;">
-                        <input type="@(IsApiKeyVisible ? "text" : "password")" class="form-input" style="flex: 1;" @bind="TempSettings.ApiKey" />
+                        @if ((TempSettings.Provider ?? "groq").ToLowerInvariant() == "gemini")
+                        {
+                            <input type="@(IsApiKeyVisible ? "text" : "password")" class="form-input" style="flex: 1;" @bind="TempSettings.GeminiApiKey" />
+                        }
+                        else
+                        {
+                            <input type="@(IsApiKeyVisible ? "text" : "password")" class="form-input" style="flex: 1;" @bind="TempSettings.GroqApiKey" placeholder="gsk_..." />
+                        }
                         <button class="btn" @onclick="() => IsApiKeyVisible = !IsApiKeyVisible">
                             @(IsApiKeyVisible ? "🔒 Gizle" : "👁 Göster")
                         </button>
                     </div>
                     <span style="font-size: 0.75rem; color: var(--text-secondary); display: block; margin-top: 4px;">
-                        🔒 API anahtarınız doğrudan tarayıcınızın kendi yerel hafızasında saklanır.
+                        🔒 API anahtarınız doğrudan tarayıcınızın yerel hafızasında saklanır.
                     </span>
                 </div>
 
-                <!-- Model & Endpoint -->
+                <!-- Model & Endpoint Selection -->
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
                     <div>
-                        <label style="font-weight: 600; display: block; margin-bottom: 4px;">Model Adı:</label>
-                        <input type="text" class="form-input" style="width: 100%" @bind="TempSettings.Model" />
+                        <label style="font-weight: 600; display: block; margin-bottom: 4px;">Model Seçimi:</label>
+                        @if ((TempSettings.Provider ?? "groq").ToLowerInvariant() == "gemini")
+                        {
+                            <select class="form-select" style="width: 100%; padding: 8px; border-radius: 6px; background: var(--card-bg); color: var(--text-primary); border: 1px solid var(--border-color);"
+                                    @bind="TempSettings.GeminiModel">
+                                <option value="gemini-3.6-flash">✨ gemini-3.6-flash (Önerilen)</option>
+                                <option value="gemini-2.0-flash">⚡ gemini-2.0-flash (Hızlı)</option>
+                                <option value="gemini-1.5-flash">📌 gemini-1.5-flash (Standart)</option>
+                            </select>
+                        }
+                        else
+                        {
+                            <select class="form-select" style="width: 100%; padding: 8px; border-radius: 6px; background: var(--card-bg); color: var(--text-primary); border: 1px solid var(--border-color);"
+                                    @bind="TempSettings.GroqModel">
+                                <option value="qwen/qwen3.8-27b">🚀 qwen/qwen3.8-27b (Qwen 27B - Önerilen)</option>
+                                <option value="llama-3.3-70b-versatile">⚡ llama-3.3-70b-versatile (Llama 3.3 70B)</option>
+                                <option value="llama-3.1-8b-instant">🏎 llama-3.1-8b-instant (Llama 3.1 8B)</option>
+                            </select>
+                        }
                     </div>
                     <div>
                         <label style="font-weight: 600; display: block; margin-bottom: 4px;">Endpoint URL:</label>
-                        <input type="text" class="form-input" style="width: 100%" @bind="TempSettings.Endpoint" />
+                        @if ((TempSettings.Provider ?? "groq").ToLowerInvariant() == "gemini")
+                        {
+                            <input type="text" class="form-input" style="width: 100%" @bind="TempSettings.GeminiEndpoint" />
+                        }
+                        else
+                        {
+                            <input type="text" class="form-input" style="width: 100%" @bind="TempSettings.GroqEndpoint" />
+                        }
                     </div>
                 </div>
 
@@ -255,7 +286,7 @@
 
     private string NewPromptName { get; set; } = string.Empty;
     private string NewPromptContent { get; set; } = string.Empty;
-    private string BuildTimestamp { get; set; } = "04.09.2026 01:20:15";
+    private string BuildTimestamp { get; set; } = "04.09.2026 01:33:23";
     private CancellationTokenSource? _ccts;
 
     protected override void OnInitialized()
@@ -282,18 +313,6 @@
     private async Task LoadDataAsync()
     {
         AppSettings = await SettingsService.LoadSettingsAsync();
-        
-        if (AppSettings.Provider == "gemini" && AppSettings.Model != "gemini-3.6-flash")
-        {
-            AppSettings.Model = "gemini-3.6-flash";
-            AppSettings.Endpoint = "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent";
-            if (string.IsNullOrWhiteSpace(AppSettings.ApiKey))
-            {
-                AppSettings.ApiKey = "AIzaSyCbglc_iOFvDx1qBo8kPVs116XWGFZTE4s";
-            }
-            await SettingsService.SaveSettingsAsync(AppSettings);
-        }
-
         SavedPrompts = AppSettings.SavedPrompts ?? new List<PromptItem>();
         SelectedPrompt = SavedPrompts.FirstOrDefault(p => p.Name == AppSettings.SelectedPromptName) ?? SavedPrompts.FirstOrDefault();
 
@@ -454,9 +473,12 @@
         TempSettings = new AppSettings
         {
             Provider = AppSettings.Provider ?? "groq",
-            ApiKey = AppSettings.ApiKey,
-            Endpoint = AppSettings.Endpoint,
-            Model = AppSettings.Model,
+            GroqApiKey = AppSettings.GroqApiKey,
+            GroqEndpoint = AppSettings.GroqEndpoint,
+            GroqModel = AppSettings.GroqModel,
+            GeminiApiKey = AppSettings.GeminiApiKey,
+            GeminiEndpoint = AppSettings.GeminiEndpoint,
+            GeminiModel = AppSettings.GeminiModel,
             Temperature = AppSettings.Temperature,
             SystemPrompt = AppSettings.SystemPrompt,
             SelectedPromptName = AppSettings.SelectedPromptName,
@@ -473,17 +495,6 @@
     {
         string p = e.Value?.ToString() ?? "groq";
         TempSettings.Provider = p;
-        if (p == "gemini")
-        {
-            TempSettings.Endpoint = "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent";
-            TempSettings.Model = "gemini-3.6-flash";
-            TempSettings.ApiKey = "AIzaSyCbglc_iOFvDx1qBo8kPVs116XWGFZTE4s";
-        }
-        else
-        {
-            TempSettings.Endpoint = "https://api.groq.com/openai/v1/chat/completions";
-            TempSettings.Model = "qwen/qwen3.8-27b";
-        }
     }
 
     private void CloseSettingsModal() => ShowSettingsModal = false;

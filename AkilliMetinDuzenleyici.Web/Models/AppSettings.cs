@@ -8,14 +8,61 @@ namespace AkilliMetinDuzenleyici.Web.Models
         [JsonPropertyName("provider")]
         public string Provider { get; set; } = "groq"; // "groq" or "gemini"
 
-        [JsonPropertyName("api_key")]
-        public string ApiKey { get; set; } = string.Empty;
+        // --- Groq Specific ---
+        [JsonPropertyName("groq_api_key")]
+        public string GroqApiKey { get; set; } = string.Empty;
 
-        [JsonPropertyName("endpoint")]
-        public string Endpoint { get; set; } = "https://api.groq.com/openai/v1/chat/completions";
+        [JsonPropertyName("groq_endpoint")]
+        public string GroqEndpoint { get; set; } = "https://api.groq.com/openai/v1/chat/completions";
 
-        [JsonPropertyName("model")]
-        public string Model { get; set; } = "qwen/qwen3.8-27b";
+        [JsonPropertyName("groq_model")]
+        public string GroqModel { get; set; } = "qwen/qwen3.8-27b";
+
+        // --- Gemini Specific ---
+        [JsonPropertyName("gemini_api_key")]
+        public string GeminiApiKey { get; set; } = "AIzaSyCbglc_iOFvDx1qBo8kPVs116XWGFZTE4s";
+
+        [JsonPropertyName("gemini_endpoint")]
+        public string GeminiEndpoint { get; set; } = "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent";
+
+        [JsonPropertyName("gemini_model")]
+        public string GeminiModel { get; set; } = "gemini-3.6-flash";
+
+        // --- Active Provider Getters/Setters ---
+        [JsonIgnore]
+        public string ApiKey
+        {
+            get => (Provider ?? "groq").ToLowerInvariant() == "gemini" 
+                ? (string.IsNullOrWhiteSpace(GeminiApiKey) ? "AIzaSyCbglc_iOFvDx1qBo8kPVs116XWGFZTE4s" : GeminiApiKey)
+                : GroqApiKey;
+            set
+            {
+                if ((Provider ?? "groq").ToLowerInvariant() == "gemini") GeminiApiKey = value;
+                else GroqApiKey = value;
+            }
+        }
+
+        [JsonIgnore]
+        public string Endpoint
+        {
+            get => (Provider ?? "groq").ToLowerInvariant() == "gemini" ? GeminiEndpoint : GroqEndpoint;
+            set
+            {
+                if ((Provider ?? "groq").ToLowerInvariant() == "gemini") GeminiEndpoint = value;
+                else GroqEndpoint = value;
+            }
+        }
+
+        [JsonIgnore]
+        public string Model
+        {
+            get => (Provider ?? "groq").ToLowerInvariant() == "gemini" ? GeminiModel : GroqModel;
+            set
+            {
+                if ((Provider ?? "groq").ToLowerInvariant() == "gemini") GeminiModel = value;
+                else GroqModel = value;
+            }
+        }
 
         [JsonPropertyName("temperature")]
         public double Temperature { get; set; } = 0.0;

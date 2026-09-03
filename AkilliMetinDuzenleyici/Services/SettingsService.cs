@@ -71,42 +71,48 @@ namespace AkilliMetinDuzenleyici.Services
             if (settings == null) return;
 
             settings.Provider = (settings.Provider?.Trim() ?? "groq").ToLowerInvariant();
-            settings.ApiKey = settings.ApiKey?.Trim() ?? string.Empty;
-            settings.Endpoint = settings.Endpoint?.Trim() ?? string.Empty;
-            settings.Model = settings.Model?.Trim() ?? string.Empty;
+            
+            // Sanitize Groq settings
+            settings.GroqApiKey = settings.GroqApiKey?.Trim() ?? string.Empty;
+            if (string.IsNullOrWhiteSpace(settings.GroqEndpoint) || settings.GroqEndpoint.Contains("googleapis"))
+            {
+                settings.GroqEndpoint = "https://api.groq.com/openai/v1/chat/completions";
+            }
+            if (string.IsNullOrWhiteSpace(settings.GroqModel) || 
+                settings.GroqModel.Contains("mixtral") || 
+                settings.GroqModel.Contains("gemma2") || 
+                settings.GroqModel.Contains("gemini"))
+            {
+                settings.GroqModel = "qwen/qwen3.8-27b";
+            }
+
+            // Sanitize Gemini settings
+            if (string.IsNullOrWhiteSpace(settings.GeminiApiKey))
+            {
+                settings.GeminiApiKey = "AIzaSyCbglc_iOFvDx1qBo8kPVs116XWGFZTE4s";
+            }
+            else
+            {
+                settings.GeminiApiKey = settings.GeminiApiKey.Trim();
+            }
+
+            if (string.IsNullOrWhiteSpace(settings.GeminiEndpoint) || settings.GeminiEndpoint.Contains("groq"))
+            {
+                settings.GeminiEndpoint = "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent";
+            }
+
+            if (string.IsNullOrWhiteSpace(settings.GeminiModel) || 
+                settings.GeminiModel.Contains("llama") || 
+                settings.GeminiModel.Contains("groq") || 
+                settings.GeminiModel.Contains("qwen") || 
+                settings.GeminiModel.Contains("2.0") || 
+                settings.GeminiModel.Contains("1.5"))
+            {
+                settings.GeminiModel = "gemini-3.6-flash";
+            }
+
             settings.SystemPrompt = settings.SystemPrompt?.Trim() ?? string.Empty;
             settings.SelectedPromptName = settings.SelectedPromptName?.Trim() ?? string.Empty;
-
-            if (settings.Provider == "gemini")
-            {
-                if (string.IsNullOrWhiteSpace(settings.ApiKey))
-                {
-                    settings.ApiKey = "AIzaSyCbglc_iOFvDx1qBo8kPVs116XWGFZTE4s";
-                }
-                if (string.IsNullOrWhiteSpace(settings.Endpoint) || settings.Endpoint.Contains("groq.com") || settings.Endpoint.Contains("openai"))
-                {
-                    settings.Endpoint = "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent";
-                }
-                if (string.IsNullOrWhiteSpace(settings.Model) || settings.Model.Contains("llama") || settings.Model.Contains("groq") || settings.Model.Contains("qwen") || settings.Model.Contains("2.0") || settings.Model.Contains("1.5"))
-                {
-                    settings.Model = "gemini-3.6-flash";
-                }
-            }
-            else // groq
-            {
-                if (string.IsNullOrWhiteSpace(settings.Endpoint) || settings.Endpoint.Contains("googleapis.com"))
-                {
-                    settings.Endpoint = "https://api.groq.com/openai/v1/chat/completions";
-                }
-                if (string.IsNullOrWhiteSpace(settings.Model) || 
-                    settings.Model.Contains("mixtral") || 
-                    settings.Model.Contains("gemma2") || 
-                    settings.Model.Contains("compound") || 
-                    settings.Model.Contains("gpt-oss"))
-                {
-                    settings.Model = "qwen/qwen3.8-27b";
-                }
-            }
 
             if (settings.SavedPrompts != null)
             {
