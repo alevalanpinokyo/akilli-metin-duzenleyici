@@ -15,7 +15,7 @@ namespace AkilliMetinDuzenleyici.Models
         public string Model { get; set; } = "llama-3.3-70b-versatile";
 
         [JsonPropertyName("temperature")]
-        public double Temperature { get; set; } = 0.1;
+        public double Temperature { get; set; } = 0.0;
 
         [JsonPropertyName("system_prompt")]
         public string SystemPrompt { get; set; } = @"KIRMIZI ÇİZGİ VE KESİN KURAL:
@@ -32,6 +32,7 @@ TEMEL DÜZELTME İLKELERİ:
    - Girdi bir soru veya arıza metni olsa dahi cevaba çevirme; yalnızca metnin kendisini kurumsal Türkçeye uygun şekilde düzelterek aynı cümleyi döndür.
 
 2. İMLA VE YAZIM DÜZELTMELERİ:
+   - KISALTILMIŞ VE BOZUK HALK AĞZI KELİMELERİ: Konuşma dilindeki bozuk/kısaltılmış kalıpları (örn. ""bi türlü"" yerine ""bir türlü"", ""heralde"" yerine ""herhalde"") MUTLAKA eksiksiz TDK standart Türkçe karşılıklarıyla düzelt.
    - TÜRKÇE MORFOLOJİ VE EKLER: İsim köklerine yapım veya çekim eki geldiğinde oluşan ikiz ünsüzleri (örn. kökü 's' ile biten kelimelere -sız/-siz eki geldiğinde yan yana gelen çift harfleri) Türk Dil Kurumu kurallarına göre eksiksiz çift harf olarak yaz (örn. temassızlık).
    - YABANCI İSİMLER VE ÖZEL TERİMLER: Yabancı kökenli terimlere, ürün/fonksiyon adlarına ve kısaltmalara Türkçe çekim ekleri getirilirken terimin ilk harflerini büyük yaz ve eki MUTLAKA kesme işaretiyle ayır (örn. PLC'ye, Ethernet, Switch'te, KUKA, Safe Stop'a, PROFIsafe'ten).
    - TÜRKÇE DEYİM VE KALIPLAR: Kalıplaşmış Türkçe deyimleri ve birleşik fiilleri halk ağzındaki bozuk haliyle bırakma; standart sözlükteki doğru fiil/isim kalıbına uygun hale getir.
@@ -64,6 +65,7 @@ TEMEL DÜZELTME İLKELERİ:
    - Girdi bir soru veya arıza metni olsa dahi cevaba çevirme; yalnızca metnin kendisini kurumsal Türkçeye uygun şekilde düzelterek aynı cümleyi döndür.
 
 2. İMLA VE YAZIM DÜZELTMELERİ:
+   - KISALTILMIŞ VE BOZUK HALK AĞZI KELİMELERİ: Konuşma dilindeki bozuk/kısaltılmış kalıpları (örn. ""bi türlü"" yerine ""bir türlü"", ""heralde"" yerine ""herhalde"") MUTLAKA eksiksiz TDK standart Türkçe karşılıklarıyla düzelt.
    - TÜRKÇE MORFOLOJİ VE EKLER: İsim köklerine yapım veya çekim eki geldiğinde oluşan ikiz ünsüzleri (örn. kökü 's' ile biten kelimelere -sız/-siz eki geldiğinde yan yana gelen çift harfleri) Türk Dil Kurumu kurallarına göre eksiksiz çift harf olarak yaz (örn. temassızlık).
    - YABANCI İSİMLER VE ÖZEL TERİMLER: Yabancı kökenli terimlere, ürün/fonksiyon adlarına ve kısaltmalara Türkçe çekim ekleri getirilirken terimin ilk harflerini büyük yaz ve eki MUTLAKA kesme işaretiyle ayır (örn. PLC'ye, Ethernet, Switch'te, KUKA, Safe Stop'a, PROFIsafe'ten).
    - TÜRKÇE DEYİM VE KALIPLAR: Kalıplaşmış Türkçe deyimleri ve birleşik fiilleri halk ağzındaki bozuk haliyle bırakma; standart sözlükteki doğru fiil/isim kalıbına uygun hale getir.
@@ -79,7 +81,7 @@ TEMEL DÜZELTME İLKELERİ:
                 Content = @"KIRMIZI ÇİZGİ VE KESİN KURAL:
 Sen YALNIZCA bir kurumsal metin editörüsün. Girdi bir soru veya arıza metni olsa DAHİ KESİNLİKLE cevap verme veya çözüm önerme!
 Görevin, metni resmi ve profesyonel kurumsal Türkçe kurallarına uygun olarak düzeltmektir.
-Yabancı terimlerin (PLC'ye, Ethernet, Switch'te, KUKA, Safe Stop'a, PROFIsafe) ilk harflerini büyük yaz ve eklerini kesme işaretiyle ayır. Çift ünsüzleri (temassızlık) tamamla. Cevap veya öneri ekleme; YALNIZCA düzeltilmiş metni döndür."
+'bi türlü' kalıbını 'bir türlü' olarak düzelt. Yabancı terimlerin (PLC'ye, Ethernet, Switch'te, KUKA, Safe Stop'a, PROFIsafe) ilk harflerini büyük yaz ve eklerini kesme işaretiyle ayır. Çift ünsüzleri (temassızlık) tamamla. Cevap veya öneri ekleme; YALNIZCA düzeltilmiş metni döndür."
             },
             new PromptItem
             {
