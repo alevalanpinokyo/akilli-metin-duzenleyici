@@ -30,8 +30,8 @@
             </div>
         </div>
 
-        <!-- Header Actions & Prompt Dropdown -->
-        <div class="header-actions">
+        <!-- Header Actions & Prompt Dropdown & Hayrat Banner -->
+        <div class="header-actions" style="display: flex; align-items: center; gap: 16px;">
             <div>
                 <label style="font-size: 0.75rem; color: var(--text-secondary); display: block; margin-bottom: 2px;">🎯 Aktif İstem (Prompt):</label>
                 <select class="form-select" @onchange="OnPromptChanged">
@@ -45,6 +45,13 @@
                 </select>
             </div>
             <button class="btn" @onclick="OpenSettingsModal" style="margin-top: 14px;">⚙ Ayarlar</button>
+
+            <!-- Hayrat Banner (Turuncu Kutulu Anma Paneli) -->
+            <div style="background: linear-gradient(135deg, rgba(255, 152, 0, 0.15) 0%, rgba(245, 124, 0, 0.25) 100%); border: 2px solid #ff9800; border-radius: 8px; padding: 8px 18px; margin-top: 10px; display: flex; align-items: center; justify-content: center; text-align: center; box-shadow: 0 2px 10px rgba(255, 152, 0, 0.25);">
+                <span style="font-weight: 800; font-size: 0.85rem; letter-spacing: 0.6px; color: #ffb74d; text-transform: uppercase;">
+                    🤍 BU METİN DÜZENLEME ARACI ERHAN ALTINKÖPRÜ'NÜN KARDEŞİNE HAYRATIDIR
+                </span>
+            </div>
         </div>
     </header>
 
@@ -286,7 +293,7 @@
 
     private string NewPromptName { get; set; } = string.Empty;
     private string NewPromptContent { get; set; } = string.Empty;
-    private string BuildTimestamp { get; set; } = "04.09.2026 01:40:08";
+    private string BuildTimestamp { get; set; } = "04.09.2026 01:46:12";
     private CancellationTokenSource? _ccts;
 
     protected override void OnInitialized()
