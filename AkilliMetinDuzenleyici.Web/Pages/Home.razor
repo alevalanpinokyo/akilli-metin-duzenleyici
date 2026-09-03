@@ -1,0 +1,511 @@
+@page "/"
+@inject IGroqApiService GroqApiService
+@inject ITextChunkerService TextChunkerService
+@inject IQuotaManagerService QuotaManagerService
+@inject ITokenCounterService TokenCounterService
+@inject ISettingsService SettingsService
+@inject IJSRuntime JSRuntime
+
+<div class="app-container">
+    <!-- TOP HEADER -->
+    <header class="header-card">
+        <div>
+            <div class="brand-title">
+                ✨ Akıllı Metin ve İmla Düzenleyici
+                <span class="badge">v1.0 - Groq Cloud Web</span>
+            </div>
+            <div class="brand-subtitle">
+                Metnin üslup ve anlamını bozmadan imla, noktalama ve yazım hatalarını yapay zeka ile otomatik düzeltin.
+            </div>
+        </div>
+
+        <!-- Quota Box -->
+        <div class="quota-box">
+            <div class="quota-header">
+                <span>📊 Günlük Kota Kullanımı</span>
+                <strong>@DailyRequestCount / @DailyMaxRequests istek</strong>
+            </div>
+            <div class="progress-bg">
+                <div class="progress-fill" style="width: @(DailyQuotaPercentage)%"></div>
+            </div>
+        </div>
+
+        <!-- Header Actions & Prompt Dropdown -->
+        <div class="header-actions">
+            <div>
+                <label style="font-size: 0.75rem; color: var(--text-secondary); display: block; margin-bottom: 2px;">🎯 Aktif İstem (Prompt):</label>
+                <select class="form-select" @onchange="OnPromptChanged">
+                    @if (SavedPrompts != null)
+                    {
+                        @foreach (var prompt in SavedPrompts)
+                        {
+                            <option value="@prompt.Name" selected="@(SelectedPrompt?.Name == prompt.Name)">@prompt.Name</option>
+                        }
+                    }
+                </select>
+            </div>
+            <button class="btn" @onclick="OpenSettingsModal" style="margin-top: 14px;">⚙ Ayarlar</button>
+        </div>
+    </header>
+
+    <!-- MAIN EDITING SPLIT GRID -->
+    <div class="main-grid">
+        <!-- Input Panel -->
+        <div class="panel-card">
+            <div class="panel-header">
+                <span class="panel-title">📝 Girdi Metni</span>
+                <div>
+                    <button class="btn" @onclick="LoadSampleText" disabled="@IsProcessing">⚡️ Örnek Yükle</button>
+                    <button class="btn" @onclick="ClearAll" disabled="@IsProcessing">🗑 Temizle</button>
+                </div>
+            </div>
+            <textarea class="text-area" @bind="InputText" @bind:event="oninput" placeholder="Düzeltmek istediğiniz Türkçe metni buraya yazın veya yapıştırın..."></textarea>
+            <div class="panel-footer">
+                <span>Kelime: <strong>@InputWordCount</strong></span>
+                <span>Tahmini Token: <strong>~@InputTokenCount</strong></span>
+            </div>
+        </div>
+
+        <!-- Action Column -->
+        <div class="action-center">
+            @if (!IsProcessing)
+            {
+                <button class="btn btn-primary" @onclick="ProcessTextAsync" disabled="@string.IsNullOrWhiteSpace(InputText)" style="width: 100%; padding: 14px 10px;">
+                    ✨ Düzenle
+                </button>
+            }
+            @if (IsProcessing)
+            {
+                <button class="btn btn-danger" @onclick="CancelProcessing" style="width: 100%; padding: 14px 10px;">
+                    ⛔️ İptal Et
+                </button>
+            }
+        </div>
+
+        <!-- Output Panel -->
+        <div class="panel-card">
+            <div class="panel-header">
+                <span class="panel-title" style="color: var(--success-color)">✅ Düzeltilmiş Metin</span>
+                <button class="btn" @onclick="CopyOutput" disabled="@string.IsNullOrEmpty(OutputText)">📋 Kopyala</button>
+            </div>
+            <textarea class="text-area" value="@OutputText" readonly placeholder="Düzeltilmiş ve imlası toparlanmış metin burada görünecektir..."></textarea>
+            <div class="panel-footer">
+                <span>Kelime: <strong>@OutputWordCount</strong></span>
+                <span>Token: <strong>~@OutputTokenCount</strong></span>
+            </div>
+        </div>
+    </div>
+
+    <!-- STATUS BAR -->
+    <footer class="status-bar">
+        <div>
+            <span>📌 <strong>Durum:</strong> @StatusMessage</span>
+            @if (!string.IsNullOrEmpty(ProgressDetailText))
+            {
+                <span style="margin-left: 12px; opacity: 0.85;">(@ProgressDetailText)</span>
+            }
+        </div>
+        <div>
+            <span>⚙ <strong>Çalışan Model:</strong> @(AppSettings?.Model ?? "groq/compound")</span>
+        </div>
+    </footer>
+</div>
+
+<!-- SETTINGS MODAL -->
+@if (ShowSettingsModal)
+{
+    <div class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 style="color: var(--primary-accent)">⚙ Groq Cloud API &amp; Uygulama Ayarları</h3>
+                <button class="btn" @onclick="CloseSettingsModal">✕</button>
+            </div>
+
+            <div style="display: flex; flex-direction: column; gap: 14px;">
+                <!-- API Key Box with Masking -->
+                <div style="background: var(--card-header-bg); padding: 12px; border-radius: 8px; border: 1px solid var(--border-color)">
+                    <label style="font-weight: 600; display: block; margin-bottom: 6px;">🔑 Groq API Key:</label>
+                    <div style="display: flex; gap: 8px;">
+                        <input type="@(IsApiKeyVisible ? "text" : "password")" class="form-input" style="flex: 1;" @bind="TempSettings.ApiKey" />
+                        <button class="btn" @onclick="() => IsApiKeyVisible = !IsApiKeyVisible">
+                            @(IsApiKeyVisible ? "🔒 Gizle" : "👁 Göster")
+                        </button>
+                    </div>
+                    <span style="font-size: 0.75rem; color: var(--text-secondary); display: block; margin-top: 4px;">
+                        🔒 API anahtarınız tarayıcınızın kendi hafızasında saklanır.
+                    </span>
+                </div>
+
+                <!-- Model & Endpoint -->
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                    <div>
+                        <label style="font-weight: 600; display: block; margin-bottom: 4px;">Model Adı:</label>
+                        <input type="text" class="form-input" style="width: 100%" @bind="TempSettings.Model" />
+                    </div>
+                    <div>
+                        <label style="font-weight: 600; display: block; margin-bottom: 4px;">Endpoint URL:</label>
+                        <input type="text" class="form-input" style="width: 100%" @bind="TempSettings.Endpoint" />
+                    </div>
+                </div>
+
+                <!-- Temperature Slider -->
+                <div>
+                    <div style="display: flex; justify-content: space-between;">
+                        <label style="font-weight: 600;">Yaratıcılık (Temperature):</label>
+                        <strong style="color: var(--primary-accent)">@TempSettings.Temperature.ToString("F2")</strong>
+                    </div>
+                    <input type="range" min="0.0" max="1.0" step="0.05" style="width: 100%; margin-top: 6px;" 
+                           value="@TempSettings.Temperature" 
+                           @onchange="OnTemperatureChanged" />
+                </div>
+
+                <!-- Prompt Manager -->
+                <div style="background: var(--card-header-bg); padding: 12px; border-radius: 8px; border: 1px solid var(--border-color)">
+                    <h4 style="color: var(--success-color); margin-bottom: 8px;">📝 Sistem İstemleri (Prompt Yöneticisi)</h4>
+                    
+                    <div style="margin-bottom: 10px;">
+                        <label style="font-weight: 600; display: block; margin-bottom: 4px;">Aktif İstem (Seçin):</label>
+                        <div style="display: flex; gap: 8px;">
+                            <select class="form-select" style="flex: 1;" @onchange="OnModalPromptSelected">
+                                @foreach (var p in TempSavedPrompts)
+                                {
+                                    <option value="@p.Name" selected="@(TempSelectedPrompt?.Name == p.Name)">@p.Name</option>
+                                }
+                            </select>
+                            <button class="btn btn-danger" @onclick="DeleteSelectedModalPrompt" disabled="@(TempSavedPrompts.Count <= 1)">
+                                🗑 Sil
+                            </button>
+                        </div>
+                    </div>
+
+                    <div style="margin-bottom: 10px;">
+                        <label style="font-weight: 600; display: block; margin-bottom: 4px;">İstem Metni:</label>
+                        <textarea class="form-input" style="width: 100%; height: 80px; resize: vertical;" @bind="TempSettings.SystemPrompt"></textarea>
+                    </div>
+
+                    <!-- Add New Prompt Box -->
+                    <div style="background: #181825; padding: 10px; border-radius: 6px;">
+                        <label style="font-weight: 600; color: var(--primary-accent); display: block; margin-bottom: 4px;">➕ Yeni İstem Ekle:</label>
+                        <input type="text" class="form-input" placeholder="İstem Başlığı (Örn: Akademik Dil)" style="width: 100%; margin-bottom: 6px;" @bind="NewPromptName" />
+                        <textarea class="form-input" placeholder="İstem Metni..." style="width: 100%; height: 50px; margin-bottom: 6px;" @bind="NewPromptContent"></textarea>
+                        <button class="btn btn-primary" @onclick="AddNewCustomPrompt" disabled="@(string.IsNullOrWhiteSpace(NewPromptName) || string.IsNullOrWhiteSpace(NewPromptContent))" style="float: right;">
+                            ➕ İstem Ekle ve Seç
+                        </button>
+                        <div style="clear: both;"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="modal-footer">
+                <button class="btn" @onclick="ResetModalDefaults">🔄 Varsayılanlara Sıfırla</button>
+                <button class="btn btn-primary" @onclick="SaveSettingsModal">Kaydet ve Kapat</button>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private AppSettings AppSettings { get; set; } = new();
+    private AppSettings TempSettings { get; set; } = new();
+
+    private List<PromptItem> SavedPrompts { get; set; } = new();
+    private PromptItem? SelectedPrompt { get; set; }
+
+    private List<PromptItem> TempSavedPrompts { get; set; } = new();
+    private PromptItem? TempSelectedPrompt { get; set; }
+
+    private string InputText { get; set; } = string.Empty;
+    private string OutputText { get; set; } = string.Empty;
+
+    private int InputWordCount => TokenCounterService.CountWords(InputText);
+    private int InputTokenCount => TokenCounterService.EstimateTokens(InputText);
+    private int OutputWordCount => TokenCounterService.CountWords(OutputText);
+    private int OutputTokenCount => TokenCounterService.EstimateTokens(OutputText);
+
+    private bool IsProcessing { get; set; } = false;
+    private string StatusMessage { get; set; } = "Hazır";
+    private string ProgressDetailText { get; set; } = string.Empty;
+
+    private int DailyRequestCount { get; set; } = 0;
+    private int DailyMaxRequests { get; set; } = 1000;
+    private double DailyQuotaPercentage => DailyMaxRequests > 0 ? ((double)DailyRequestCount / DailyMaxRequests) * 100 : 0;
+
+    private bool ShowSettingsModal { get; set; } = false;
+    private bool IsApiKeyVisible { get; set; } = false;
+
+    private string NewPromptName { get; set; } = string.Empty;
+    private string NewPromptContent { get; set; } = string.Empty;
+
+    private CancellationTokenSource? _ccts;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await LoadDataAsync();
+            StateHasChanged();
+        }
+    }
+
+    private async Task LoadDataAsync()
+    {
+        AppSettings = await SettingsService.LoadSettingsAsync();
+        SavedPrompts = AppSettings.SavedPrompts ?? new List<PromptItem>();
+        SelectedPrompt = SavedPrompts.FirstOrDefault(p => p.Name == AppSettings.SelectedPromptName) ?? SavedPrompts.FirstOrDefault();
+
+        var usage = await QuotaManagerService.GetUsageAsync();
+        DailyRequestCount = usage.GunlukIstekSayisi;
+        DailyMaxRequests = usage.GunlukMaxIstek;
+    }
+
+    private void OnPromptChanged(ChangeEventArgs e)
+    {
+        string? name = e.Value?.ToString();
+        if (!string.IsNullOrEmpty(name))
+        {
+            var p = SavedPrompts.FirstOrDefault(x => x.Name == name);
+            if (p != null)
+            {
+                SelectedPrompt = p;
+                AppSettings.SelectedPromptName = p.Name;
+                AppSettings.SystemPrompt = p.Content;
+                StatusMessage = $"İstemi Değiştirildi: '{p.Name}'";
+                _ = SettingsService.SaveSettingsAsync(AppSettings);
+            }
+        }
+    }
+
+    private async Task ProcessTextAsync()
+    {
+        if (string.IsNullOrWhiteSpace(InputText)) return;
+
+        SettingsService.SanitizeSettings(AppSettings);
+        if (string.IsNullOrWhiteSpace(AppSettings.ApiKey))
+        {
+            await JSRuntime.InvokeVoidAsync("alert", "Groq API anahtarı boş olamaz! Lütfen Ayarlar bölümünden API anahtarınızı girin.");
+            return;
+        }
+
+        bool canMake = await QuotaManagerService.CanMakeRequestAsync();
+        if (!canMake)
+        {
+            await JSRuntime.InvokeVoidAsync("alert", "Günlük 1000 istek kotanıza ulaştınız! Yeni istekler yarın 00:00'da sıfırlanacaktır.");
+            StatusMessage = "Günlük istek kotası doldu (1000/1000).";
+            return;
+        }
+
+        IsProcessing = true;
+        StatusMessage = $"Groq Cloud API ile düzenleme yapılıyor (Model: {AppSettings.Model})...";
+        ProgressDetailText = string.Empty;
+        OutputText = string.Empty;
+
+        _ccts = new CancellationTokenSource();
+        CancellationToken token = _ccts.Token;
+
+        try
+        {
+            List<TextChunk> chunks = TextChunkerService.ChunkText(InputText, AppSettings.MaxWordsPerChunk);
+            int totalChunks = chunks.Count;
+
+            int totalPromptTokens = 0;
+            int totalCompletionTokens = 0;
+
+            for (int i = 0; i < totalChunks; i++)
+            {
+                token.ThrowIfCancellationRequested();
+                TextChunk currentChunk = chunks[i];
+                int chunkNumber = i + 1;
+
+                StatusMessage = totalChunks > 1
+                    ? $"Parça {chunkNumber}/{totalChunks} işleniyor (Model: {AppSettings.Model})..."
+                    : $"Groq Cloud API ile düzenleme yapılıyor (Model: {AppSettings.Model})...";
+
+                GroqApiResult result = await GroqApiService.CorrectTextAsync(
+                    currentChunk.Text,
+                    AppSettings,
+                    status => ProgressDetailText = status,
+                    token);
+
+                if (!result.IsSuccess)
+                {
+                    await JSRuntime.InvokeVoidAsync("alert", $"Parça {chunkNumber} işlenirken hata oluştu:\n{result.ErrorMessage}");
+                    StatusMessage = $"Hata: {result.ErrorMessage}";
+                    return;
+                }
+
+                currentChunk.ProcessedText = result.CorrectedText;
+                currentChunk.IsSuccess = true;
+
+                totalPromptTokens += result.PromptTokens;
+                totalCompletionTokens += result.CompletionTokens;
+
+                if (totalChunks > 1 && i < totalChunks - 1)
+                {
+                    StatusMessage = $"Hız sınırı koruması: Bekleniyor ({AppSettings.DelayBetweenChunksMs} ms)...";
+                    await Task.Delay(AppSettings.DelayBetweenChunksMs, token);
+                }
+            }
+
+            OutputText = TextChunkerService.RecombineChunks(chunks);
+
+            int totalWords = InputWordCount;
+            int totalTokensUsed = (totalPromptTokens + totalCompletionTokens) > 0 ? (totalPromptTokens + totalCompletionTokens) : InputTokenCount;
+
+            await QuotaManagerService.RecordUsageAsync(totalWords, totalTokensUsed);
+
+            var usage = await QuotaManagerService.GetUsageAsync();
+            DailyRequestCount = usage.GunlukIstekSayisi;
+
+            StatusMessage = "Düzenleme başarıyla tamamlandı!";
+            ProgressDetailText = $"İşlenen Parça: {totalChunks} | Kullanılan Token: ~{totalTokensUsed}";
+        }
+        catch (OperationCanceledException)
+        {
+            StatusMessage = "İşlem kullanıcı tarafından iptal edildi.";
+            ProgressDetailText = string.Empty;
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = $"Hata: {ex.Message}";
+        }
+        finally
+        {
+            IsProcessing = false;
+            _ccts?.Dispose();
+            _ccts = null;
+        }
+    }
+
+    private void CancelProcessing()
+    {
+        _ccts?.Cancel();
+        StatusMessage = "İptal ediliyor...";
+    }
+
+    private async Task CopyOutput()
+    {
+        if (!string.IsNullOrEmpty(OutputText))
+        {
+            await JSRuntime.InvokeVoidAsync("navigator.clipboard.writeText", OutputText);
+            StatusMessage = "Düzeltilmiş metin panoya kopyalandı!";
+        }
+    }
+
+    private void ClearAll()
+    {
+        InputText = string.Empty;
+        OutputText = string.Empty;
+        StatusMessage = "Temizlendi. Yeni metin girebilirsiniz.";
+        ProgressDetailText = string.Empty;
+    }
+
+    private void LoadSampleText()
+    {
+        InputText = "gecen gun fabrikadaki panonun basina gectim saat sabah sekiz civariydi heralde plc ye baglanmaya calisiyorum fakat ethernet portundan bi türlü iletisim gelmiyor kabloyumu degistirsem switchdemi sikinti var anlamadim gitti temasızlık olustu diye dusunmedim degil acikcasi kuka robotumuz safe stopa gecti neden olabilir profisafe kartindan supheleniyorum ne yapmaliyim";
+        StatusMessage = "Örnek fabrika/PLC metni yüklendi.";
+    }
+
+    private void OpenSettingsModal()
+    {
+        TempSettings = new AppSettings
+        {
+            ApiKey = AppSettings.ApiKey,
+            Endpoint = AppSettings.Endpoint,
+            Model = AppSettings.Model,
+            Temperature = AppSettings.Temperature,
+            SystemPrompt = AppSettings.SystemPrompt,
+            SelectedPromptName = AppSettings.SelectedPromptName,
+            MaxWordsPerChunk = AppSettings.MaxWordsPerChunk,
+            DelayBetweenChunksMs = AppSettings.DelayBetweenChunksMs
+        };
+
+        TempSavedPrompts = AppSettings.SavedPrompts?.Select(x => new PromptItem { Name = x.Name, Content = x.Content }).ToList() ?? new();
+        TempSelectedPrompt = TempSavedPrompts.FirstOrDefault(p => p.Name == TempSettings.SelectedPromptName) ?? TempSavedPrompts.FirstOrDefault();
+        ShowSettingsModal = true;
+    }
+
+    private void CloseSettingsModal() => ShowSettingsModal = false;
+
+    private void OnModalPromptSelected(ChangeEventArgs e)
+    {
+        string? name = e.Value?.ToString();
+        if (!string.IsNullOrEmpty(name))
+        {
+            var p = TempSavedPrompts.FirstOrDefault(x => x.Name == name);
+            if (p != null)
+            {
+                TempSelectedPrompt = p;
+                TempSettings.SelectedPromptName = p.Name;
+                TempSettings.SystemPrompt = p.Content;
+            }
+        }
+    }
+
+    private void AddNewCustomPrompt()
+    {
+        if (string.IsNullOrWhiteSpace(NewPromptName) || string.IsNullOrWhiteSpace(NewPromptContent)) return;
+        string name = NewPromptName.Trim();
+        string content = NewPromptContent.Trim();
+
+        var existing = TempSavedPrompts.FirstOrDefault(x => x.Name.Equals(name, StringComparison.OrdinalIgnoreCase));
+        if (existing != null)
+        {
+            existing.Content = content;
+            TempSelectedPrompt = existing;
+        }
+        else
+        {
+            var item = new PromptItem { Name = name, Content = content };
+            TempSavedPrompts.Add(item);
+            TempSelectedPrompt = item;
+        }
+
+        TempSettings.SelectedPromptName = TempSelectedPrompt.Name;
+        TempSettings.SystemPrompt = TempSelectedPrompt.Content;
+
+        NewPromptName = string.Empty;
+        NewPromptContent = string.Empty;
+    }
+
+    private void DeleteSelectedModalPrompt()
+    {
+        if (TempSelectedPrompt == null || TempSavedPrompts.Count <= 1) return;
+        var toRemove = TempSelectedPrompt;
+        TempSavedPrompts.Remove(toRemove);
+        TempSelectedPrompt = TempSavedPrompts.FirstOrDefault();
+        if (TempSelectedPrompt != null)
+        {
+            TempSettings.SelectedPromptName = TempSelectedPrompt.Name;
+            TempSettings.SystemPrompt = TempSelectedPrompt.Content;
+        }
+    }
+
+    private async Task SaveSettingsModal()
+    {
+        TempSettings.SavedPrompts = TempSavedPrompts;
+        SettingsService.SanitizeSettings(TempSettings);
+        AppSettings = TempSettings;
+        SavedPrompts = AppSettings.SavedPrompts;
+        SelectedPrompt = SavedPrompts.FirstOrDefault(p => p.Name == AppSettings.SelectedPromptName) ?? SavedPrompts.FirstOrDefault();
+
+        await SettingsService.SaveSettingsAsync(AppSettings);
+        ShowSettingsModal = false;
+        StatusMessage = "Ayarlar kaydedildi.";
+    }
+
+    private void OnTemperatureChanged(ChangeEventArgs e)
+    {
+        if (double.TryParse(e.Value?.ToString()?.Replace(',', '.'), System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out double val))
+        {
+            TempSettings.Temperature = val;
+        }
+    }
+
+    private void ResetModalDefaults()
+    {
+        var def = new AppSettings();
+        TempSettings = def;
+        TempSavedPrompts = def.SavedPrompts;
+        TempSelectedPrompt = TempSavedPrompts.FirstOrDefault();
+    }
+}

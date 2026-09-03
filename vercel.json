@@ -1,0 +1,7 @@
+{
+  "buildCommand": "dotnet publish AkilliMetinDuzenleyici.Web/AkilliMetinDuzenleyici.Web.csproj -c Release -o output",
+  "outputDirectory": "output/wwwroot",
+  "rewrites": [
+    { "source": "/(.*)", "destination": "/index.html" }
+  ]
+}

@@ -1,0 +1,8 @@
+bin/
+obj/
+output/
+.vs/
+*.user
+*.lock.json
+kullanim.json
+settings.json
