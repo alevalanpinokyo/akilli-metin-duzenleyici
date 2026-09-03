@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="tr">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Akıllı Metin ve İmla Düzenleyici - Groq Cloud API</title>
+    <base href="/" />
+    <link rel="stylesheet" href="lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="css/app.css" />
+    <link rel="icon" type="image/png" href="favicon.png" />
+    <link href="AkilliMetinDuzenleyici.Web.styles.css" rel="stylesheet" />
+    <style>
+        #blazor-error-ui .reload {
+            color: #6ea8fe !important;
+            font-weight: 600;
+        }
+    </style>
+</head>
+
+<body>
+    <main id="app">
+        <svg class="loading-progress">
+            <circle r="40%" cx="50%" cy="50%" />
+            <circle r="40%" cx="50%" cy="50%" />
+        </svg>
+        <div class="loading-progress-text">Yükleniyor...</div>
+    </main>
+
+    <div id="blazor-error-ui">
+        Bir hata oluştu.
+        <a href="." class="reload">Yenile</a>
+        <span class="dismiss">🗙</span>
+    </div>
+
+    <script src="_framework/blazor.webassembly.js" autostart="false"></script>
+    <script>
+        window.onload = function() {
+            if (window.Blazor) {
+                Blazor.start({
+                    loadBootResource: function (type, name, defaultUri, integrity) {
+                        return defaultUri;
+                    }
+                });
+            }
+        };
+    </script>
+</body>
+
+</html>

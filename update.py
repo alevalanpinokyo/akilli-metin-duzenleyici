@@ -54,7 +54,7 @@ def main():
         print("Derleme başarısız oldu!")
         sys.exit(1)
 
-    print_step("4. SIKIŞTIRILMIŞ (.br/.gz) ÇAKIŞMA TEMİZLİĞİ")
+    print_step("4. SIKIŞTIRILMIŞ (.br/.gz) ÇAKIŞMA TEMİZLİĞİ VE 404 KOPYALAMA")
     wwwroot = os.path.join(dist_dir, "wwwroot")
     for root, dirs, files in os.walk(wwwroot):
         for file in files:
@@ -65,22 +65,49 @@ def main():
                 except Exception as e:
                     pass
 
+    # Copy index.html to 404.html for fallback SPA routing
+    idx_path = os.path.join(wwwroot, "index.html")
+    f404_path = os.path.join(wwwroot, "404.html")
+    if os.path.exists(idx_path):
+        shutil.copyfile(idx_path, f404_path)
+        print("404.html fallback dosyası oluşturuldu.")
+
     print_step("5. VERCEL CONFIGURATION (vercel.json)")
     vercel_config = {
         "outputDirectory": "dist/wwwroot",
-        "cleanUrls": True,
         "headers": [
             {
-                "source": "/_framework/(.*)",
+                "source": "/_framework/(.*)\\.wasm",
                 "headers": [
-                    { "key": "Cache-Control", "value": "no-cache, no-store, must-revalidate" },
-                    { "key": "Access-Control-Allow-Origin", "value": "*" }
+                    { "key": "Content-Type", "value": "application/wasm" },
+                    { "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }
+                ]
+            },
+            {
+                "source": "/_framework/(.*)\\.dat",
+                "headers": [
+                    { "key": "Content-Type", "value": "application/octet-stream" },
+                    { "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }
+                ]
+            },
+            {
+                "source": "/_framework/(.*)\\.js",
+                "headers": [
+                    { "key": "Content-Type", "value": "application/javascript" }
+                ]
+            },
+            {
+                "source": "/_framework/(.*)\\.json",
+                "headers": [
+                    { "key": "Content-Type", "value": "application/json" }
                 ]
             }
         ],
-        "routes": [
-            { "handle": "filesystem" },
-            { "src": "/.*", "dest": "/index.html" }
+        "rewrites": [
+            {
+                "source": "/((?!_framework/|css/|lib/|favicon.png|icon-192.png|AkilliMetinDuzenleyici.Web.styles.css).*)",
+                "destination": "/index.html"
+            }
         ]
     }
     with open(os.path.join(workspace, "vercel.json"), "w", encoding="utf-8") as f:
@@ -90,7 +117,7 @@ def main():
     print_step("6. GİT VERSİYONLAMA VE PUSH")
     version_tag = time.strftime("v1.0.%Y%m%d%H%M%S")
     run_cmd("git add .", cwd=workspace)
-    run_cmd(f'git commit -m "Automated Deploy {version_tag}: Timestamp {now_str}"', cwd=workspace)
+    run_cmd(f'git commit -m "Automated Deploy {version_tag}: Bulletproof Vercel MIME & rewrites"', cwd=workspace)
     if run_cmd("git push origin main", cwd=workspace):
         print_step(f"BAŞARILI! Derleme Saati: {now_str} (Versiyon: {version_tag}) GitHub'a Pushlandı!")
         print("Vercel birkaç saniye içinde bu versiyonu otomatik yayınlayacak.")
