@@ -71,12 +71,11 @@ namespace AkilliMetinDuzenleyici.Web.Services
             Action<string>? statusCallback,
             CancellationToken cancellationToken)
         {
-            string[] geminiModels = new[] { "gemini-2.0-flash", "gemini-1.5-flash", "gemini-2.0-flash-lite" };
-            string targetModel = settings.Model;
-            if (string.IsNullOrWhiteSpace(targetModel) || Array.IndexOf(geminiModels, targetModel) < 0)
-            {
-                targetModel = "gemini-2.0-flash";
-            }
+            string targetModel = string.IsNullOrWhiteSpace(settings.Model) || settings.Model.Contains("llama") || settings.Model.Contains("groq") || settings.Model.Contains("qwen")
+                ? "gemini-2.0-flash" 
+                : settings.Model;
+
+            string[] geminiFallbackChain = new[] { "gemini-2.0-flash", "gemini-1.5-flash", "gemini-2.0-flash-lite" };
 
             int maxRetries = 3;
             int currentRetry = 0;
@@ -170,16 +169,15 @@ namespace AkilliMetinDuzenleyici.Web.Services
 
                         if (currentRetry <= maxRetries && (response.StatusCode == HttpStatusCode.NotFound || response.StatusCode == HttpStatusCode.BadRequest || response.StatusCode == HttpStatusCode.TooManyRequests || errorText.Contains("404") || errorText.Contains("NOT_FOUND")))
                         {
-                            int currentIndex = Array.IndexOf(geminiModels, targetModel);
-                            if (currentIndex >= 0 && currentIndex < geminiModels.Length - 1)
+                            int currentIndex = Array.IndexOf(geminiFallbackChain, targetModel);
+                            if (currentIndex >= 0 && currentIndex < geminiFallbackChain.Length - 1)
                             {
-                                targetModel = geminiModels[currentIndex + 1];
+                                targetModel = geminiFallbackChain[currentIndex + 1];
                             }
                             else
                             {
                                 targetModel = "gemini-2.0-flash";
                             }
-                            settings.Model = targetModel;
 
                             statusCallback?.Invoke($"Gemini Model Uyarısı. Otomatik aktif modele geçiliyor: '{targetModel}'...");
                             await Task.Delay(500, cancellationToken);
@@ -221,16 +219,15 @@ namespace AkilliMetinDuzenleyici.Web.Services
             Action<string>? statusCallback,
             CancellationToken cancellationToken)
         {
-            string[] groqModels = new[] { "qwen/qwen3.8-27b", "llama-3.3-70b-versatile", "llama-3.1-8b-instant" };
-            string targetModel = settings.Model;
-            if (string.IsNullOrWhiteSpace(targetModel) || Array.IndexOf(groqModels, targetModel) < 0)
-            {
-                targetModel = "qwen/qwen3.8-27b";
-            }
+            string targetModel = string.IsNullOrWhiteSpace(settings.Model) || settings.Model.Contains("gemini")
+                ? "llama-3.3-70b-versatile" 
+                : settings.Model;
 
             string endpoint = string.IsNullOrWhiteSpace(settings.Endpoint) || settings.Endpoint.Contains("googleapis.com") 
                 ? "https://api.groq.com/openai/v1/chat/completions" 
                 : settings.Endpoint;
+
+            string[] groqFallbackChain = new[] { "llama-3.3-70b-versatile", "llama-3.1-8b-instant", "qwen/qwen3.8-27b" };
 
             int maxRetries = 3;
             int currentRetry = 0;
@@ -313,28 +310,27 @@ namespace AkilliMetinDuzenleyici.Web.Services
                     else if (response.StatusCode == HttpStatusCode.TooManyRequests || response.StatusCode == HttpStatusCode.RequestEntityTooLarge)
                     {
                         currentRetry++;
-                        int currentIndex = Array.IndexOf(groqModels, targetModel);
+                        int currentIndex = Array.IndexOf(groqFallbackChain, targetModel);
 
-                        if (currentIndex >= 0 && currentIndex < groqModels.Length - 1)
+                        if (currentIndex >= 0 && currentIndex < groqFallbackChain.Length - 1)
                         {
-                            targetModel = groqModels[currentIndex + 1];
+                            targetModel = groqFallbackChain[currentIndex + 1];
                         }
                         else
                         {
                             targetModel = "llama-3.1-8b-instant";
                         }
-                        settings.Model = targetModel;
 
                         if (currentRetry > maxRetries)
                         {
                             return new GroqApiResult
                             {
                                 IsSuccess = false,
-                                ErrorMessage = $"Groq istek sınırı (HTTP {(int)response.StatusCode}) aşıldı."
+                                ErrorMessage = $"Groq istek/token sınırı (HTTP {(int)response.StatusCode}) aşıldı."
                             };
                         }
 
-                        int delaySeconds = 3 * currentRetry;
+                        int delaySeconds = 2 * currentRetry;
                         statusCallback?.Invoke($"Groq limit uyarısı. {delaySeconds} saniye beklenip '{targetModel}' ile deneniyor...");
                         await Task.Delay(TimeSpan.FromSeconds(delaySeconds), cancellationToken);
                         continue;
@@ -346,16 +342,15 @@ namespace AkilliMetinDuzenleyici.Web.Services
 
                         if (currentRetry <= maxRetries && (response.StatusCode == HttpStatusCode.NotFound || response.StatusCode == HttpStatusCode.BadRequest || errorText.Contains("model_not_found") || errorText.Contains("model_decommissioned") || errorText.Contains("decommissioned")))
                         {
-                            int currentIndex = Array.IndexOf(groqModels, targetModel);
-                            if (currentIndex >= 0 && currentIndex < groqModels.Length - 1)
+                            int currentIndex = Array.IndexOf(groqFallbackChain, targetModel);
+                            if (currentIndex >= 0 && currentIndex < groqFallbackChain.Length - 1)
                             {
-                                targetModel = groqModels[currentIndex + 1];
+                                targetModel = groqFallbackChain[currentIndex + 1];
                             }
                             else
                             {
                                 targetModel = "llama-3.3-70b-versatile";
                             }
-                            settings.Model = targetModel;
 
                             statusCallback?.Invoke($"Model Uyarısı. Otomatik aktif modele geçiliyor: '{targetModel}'...");
                             await Task.Delay(500, cancellationToken);
@@ -386,7 +381,7 @@ namespace AkilliMetinDuzenleyici.Web.Services
                     }
 
                     statusCallback?.Invoke($"Groq bağlantı hatası, tekrar deneniyor ({currentRetry}/{maxRetries})...");
-                    await Task.Delay(TimeSpan.FromSeconds(3 * currentRetry), cancellationToken);
+                    await Task.Delay(TimeSpan.FromSeconds(2 * currentRetry), cancellationToken);
                 }
             }
         }
