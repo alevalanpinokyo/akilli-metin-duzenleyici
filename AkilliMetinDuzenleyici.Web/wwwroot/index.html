@@ -35,12 +35,15 @@
 
     <script src="_framework/blazor.webassembly.js" autostart="false"></script>
     <script>
-        Blazor.start({
-            loadBootResource: function (type, name, defaultUri, integrity) {
-                // Return defaultUri directly to bypass hash conflicts
-                return defaultUri;
+        window.onload = function() {
+            if (window.Blazor) {
+                Blazor.start({
+                    loadBootResource: function (type, name, defaultUri, integrity) {
+                        return defaultUri;
+                    }
+                });
             }
-        });
+        };
     </script>
 </body>
 
