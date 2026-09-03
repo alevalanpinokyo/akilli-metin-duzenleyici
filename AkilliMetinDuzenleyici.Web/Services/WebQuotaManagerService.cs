@@ -1,35 +1,14 @@
 using System;
 using System.Text.Json;
-using System.Text.Json.Serialization;
 using System.Threading.Tasks;
+using AkilliMetinDuzenleyici.Web.Models;
 using Microsoft.JSInterop;
-
-namespace AkilliMetinDuzenleyici.Web.Models
-{
-    public class UsageData
-    {
-        [JsonPropertyName("SonTarih")]
-        public string SonTarih { get; set; } = DateTime.Now.ToString("yyyy-MM-dd");
-
-        [JsonPropertyName("GunlukIstekSayisi")]
-        public int GunlukIstekSayisi { get; set; } = 0;
-
-        [JsonPropertyName("GunlukMaxIstek")]
-        public int GunlukMaxIstek { get; set; } = 1000;
-
-        [JsonPropertyName("ToplamIslenanKelime")]
-        public int ToplamIslenanKelime { get; set; } = 0;
-
-        [JsonPropertyName("ToplamHarcananToken")]
-        public int ToplamHarcananToken { get; set; } = 0;
-    }
-}
 
 namespace AkilliMetinDuzenleyici.Web.Services
 {
     public interface IQuotaManagerService
     {
-        Task<AkilliMetinDuzenleyici.Web.Models.UsageData> GetUsageAsync();
+        Task<UsageData> GetUsageAsync();
         Task<bool> CanMakeRequestAsync();
         Task RecordUsageAsync(int wordsProcessed, int tokensUsed);
     }
@@ -44,14 +23,14 @@ namespace AkilliMetinDuzenleyici.Web.Services
             _jsRuntime = jsRuntime;
         }
 
-        public async Task<AkilliMetinDuzenleyici.Web.Models.UsageData> GetUsageAsync()
+        public async Task<UsageData> GetUsageAsync()
         {
             try
             {
                 string json = await _jsRuntime.InvokeAsync<string>("localStorage.getItem", LocalStorageKey);
                 if (!string.IsNullOrEmpty(json))
                 {
-                    var data = JsonSerializer.Deserialize<AkilliMetinDuzenleyici.Web.Models.UsageData>(json);
+                    var data = JsonSerializer.Deserialize<UsageData>(json);
                     if (data != null)
                     {
                         string today = DateTime.Now.ToString("yyyy-MM-dd");
@@ -61,7 +40,7 @@ namespace AkilliMetinDuzenleyici.Web.Services
                             data.GunlukIstekSayisi = 0;
                             data.ToplamIslenanKelime = 0;
                             data.ToplamHarcananToken = 0;
-                            await SaveUsageAsync(data);
+                            _ = SaveUsageAsync(data);
                         }
                         return data;
                     }
@@ -69,12 +48,10 @@ namespace AkilliMetinDuzenleyici.Web.Services
             }
             catch
             {
-                // Fallback for SSG / initial render
+                // Fallback for SSR / initial render
             }
 
-            var defaultData = new AkilliMetinDuzenleyici.Web.Models.UsageData();
-            await SaveUsageAsync(defaultData);
-            return defaultData;
+            return new UsageData();
         }
 
         public async Task<bool> CanMakeRequestAsync()
@@ -92,7 +69,7 @@ namespace AkilliMetinDuzenleyici.Web.Services
             await SaveUsageAsync(usage);
         }
 
-        private async Task SaveUsageAsync(AkilliMetinDuzenleyici.Web.Models.UsageData data)
+        private async Task SaveUsageAsync(UsageData data)
         {
             try
             {
@@ -101,7 +78,7 @@ namespace AkilliMetinDuzenleyici.Web.Services
             }
             catch
             {
-                // Ignore JS Interop errors on pre-render
+                // Ignore JS Interop errors
             }
         }
     }

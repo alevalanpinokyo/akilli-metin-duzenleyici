@@ -238,11 +238,23 @@
 
     private CancellationTokenSource? _ccts;
 
+    protected override void OnInitialized()
+    {
+        SavedPrompts = AppSettings.SavedPrompts ?? new List<PromptItem>();
+        SelectedPrompt = SavedPrompts.FirstOrDefault(p => p.Name == AppSettings.SelectedPromptName) ?? SavedPrompts.FirstOrDefault();
+    }
+
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (firstRender)
         {
-            await LoadDataAsync();
+            try
+            {
+                await LoadDataAsync();
+            }
+            catch
+            {
+            }
             StateHasChanged();
         }
     }

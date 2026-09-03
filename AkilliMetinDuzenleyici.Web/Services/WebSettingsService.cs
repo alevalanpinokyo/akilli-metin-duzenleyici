@@ -1,3 +1,4 @@
+using System;
 using System.Text.Json;
 using System.Threading.Tasks;
 using AkilliMetinDuzenleyici.Web.Models;
@@ -39,12 +40,11 @@ namespace AkilliMetinDuzenleyici.Web.Services
             }
             catch
             {
-                // Fallback for SSR
+                // Fallback for SSR / initial render
             }
 
             var defaultSettings = new AppSettings();
             SanitizeSettings(defaultSettings);
-            await SaveSettingsAsync(defaultSettings);
             return defaultSettings;
         }
 

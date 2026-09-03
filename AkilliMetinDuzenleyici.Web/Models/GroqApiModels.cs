@@ -72,4 +72,22 @@ namespace AkilliMetinDuzenleyici.Web.Models
         public int CompletionTokens { get; set; }
         public int TotalTokens { get; set; }
     }
+
+    public class UsageData
+    {
+        [JsonPropertyName("SonTarih")]
+        public string SonTarih { get; set; } = System.DateTime.Now.ToString("yyyy-MM-dd");
+
+        [JsonPropertyName("GunlukIstekSayisi")]
+        public int GunlukIstekSayisi { get; set; } = 0;
+
+        [JsonPropertyName("GunlukMaxIstek")]
+        public int GunlukMaxIstek { get; set; } = 1000;
+
+        [JsonPropertyName("ToplamIslenanKelime")]
+        public int ToplamIslenanKelime { get; set; } = 0;
+
+        [JsonPropertyName("ToplamHarcananToken")]
+        public int ToplamHarcananToken { get; set; } = 0;
+    }
 }
