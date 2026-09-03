@@ -33,18 +33,7 @@
         <span class="dismiss">🗙</span>
     </div>
 
-    <script src="_framework/blazor.webassembly.js" autostart="false"></script>
-    <script>
-        window.onload = function() {
-            if (window.Blazor) {
-                Blazor.start({
-                    loadBootResource: function (type, name, defaultUri, integrity) {
-                        return defaultUri;
-                    }
-                });
-            }
-        };
-    </script>
+    <script src="_framework/blazor.webassembly.js"></script>
 </body>
 
 </html>

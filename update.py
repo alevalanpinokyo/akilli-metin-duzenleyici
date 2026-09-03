@@ -56,14 +56,17 @@ def main():
 
     print_step("4. SIKIŞTIRILMIŞ (.br/.gz) ÇAKIŞMA TEMİZLİĞİ VE 404 KOPYALAMA")
     wwwroot = os.path.join(dist_dir, "wwwroot")
+    removed_count = 0
     for root, dirs, files in os.walk(wwwroot):
         for file in files:
             if file.endswith(".br") or file.endswith(".gz"):
                 file_path = os.path.join(root, file)
                 try:
                     os.remove(file_path)
+                    removed_count += 1
                 except Exception as e:
                     pass
+    print(f"Toplam {removed_count} adet .br ve .gz dosyası silindi.")
 
     # Copy index.html to 404.html for fallback SPA routing
     idx_path = os.path.join(wwwroot, "index.html")
@@ -75,19 +78,18 @@ def main():
     print_step("5. VERCEL CONFIGURATION (vercel.json)")
     vercel_config = {
         "outputDirectory": "dist/wwwroot",
+        "cleanUrls": True,
         "headers": [
             {
                 "source": "/_framework/(.*)\\.wasm",
                 "headers": [
-                    { "key": "Content-Type", "value": "application/wasm" },
-                    { "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }
+                    { "key": "Content-Type", "value": "application/wasm" }
                 ]
             },
             {
                 "source": "/_framework/(.*)\\.dat",
                 "headers": [
-                    { "key": "Content-Type", "value": "application/octet-stream" },
-                    { "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }
+                    { "key": "Content-Type", "value": "application/octet-stream" }
                 ]
             },
             {
@@ -117,7 +119,7 @@ def main():
     print_step("6. GİT VERSİYONLAMA VE PUSH")
     version_tag = time.strftime("v1.0.%Y%m%d%H%M%S")
     run_cmd("git add .", cwd=workspace)
-    run_cmd(f'git commit -m "Automated Deploy {version_tag}: Bulletproof Vercel MIME & rewrites"', cwd=workspace)
+    run_cmd(f'git commit -m "Automated Deploy {version_tag}: Purged .br/.gz precompressed Vercel conflict files"', cwd=workspace)
     if run_cmd("git push origin main", cwd=workspace):
         print_step(f"BAŞARILI! Derleme Saati: {now_str} (Versiyon: {version_tag}) GitHub'a Pushlandı!")
         print("Vercel birkaç saniye içinde bu versiyonu otomatik yayınlayacak.")
