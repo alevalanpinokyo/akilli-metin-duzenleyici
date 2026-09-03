@@ -91,7 +91,7 @@ Görevin, metnin imla ve yazım hatalarını düzeltirken anlatımın akıcılı
         };
 
         [JsonPropertyName("max_words_per_chunk")]
-        public int MaxWordsPerChunk { get; set; } = 2000;
+        public int MaxWordsPerChunk { get; set; } = 600;
 
         [JsonPropertyName("delay_between_chunks_ms")]
         public int DelayBetweenChunksMs { get; set; } = 1500;
