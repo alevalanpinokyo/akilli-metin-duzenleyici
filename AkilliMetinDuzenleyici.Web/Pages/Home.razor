@@ -99,6 +99,10 @@
             <div class="panel-footer">
                 <span>Kelime: <strong>@OutputWordCount</strong></span>
                 <span>Token: <strong>~@OutputTokenCount</strong></span>
+                @if (ProcessElapsedSeconds > 0)
+                {
+                    <span style="color: #ffb74d; font-weight: 600;">⏱ İşlem Süresi: <strong>@ProcessElapsedSeconds.ToString("0.00") sn</strong></span>
+                }
             </div>
         </div>
     </div>
@@ -296,7 +300,8 @@
 
     private string NewPromptName { get; set; } = string.Empty;
     private string NewPromptContent { get; set; } = string.Empty;
-    private string BuildTimestamp { get; set; } = "04.09.2026 12:11:20";
+    private string BuildTimestamp { get; set; } = "04.09.2026 12:19:00";
+    private double ProcessElapsedSeconds { get; set; } = 0;
     private CancellationTokenSource? _ccts;
 
     protected override void OnInitialized()
@@ -368,12 +373,14 @@
         }
 
         IsProcessing = true;
-        StatusMessage = $"Groq Cloud API ile düzenleme yapılıyor (Model: {AppSettings.Model})...";
+        ProcessElapsedSeconds = 0;
+        StatusMessage = $"Düzenleme yapılıyor (Sağlayıcı: {AppSettings.Provider.ToUpperInvariant()}, Model: {AppSettings.Model})...";
         ProgressDetailText = string.Empty;
         OutputText = string.Empty;
 
         _ccts = new CancellationTokenSource();
         CancellationToken token = _ccts.Token;
+        var stopwatch = System.Diagnostics.Stopwatch.StartNew();
 
         try
         {
@@ -391,7 +398,7 @@
 
                 StatusMessage = totalChunks > 1
                     ? $"Parça {chunkNumber}/{totalChunks} işleniyor (Model: {AppSettings.Model})..."
-                    : $"Groq Cloud API ile düzenleme yapılıyor (Model: {AppSettings.Model})...";
+                    : $"Düzenleme yapılıyor (Model: {AppSettings.Model})...";
 
                 GroqApiResult result = await GroqApiService.CorrectTextAsync(
                     currentChunk.Text,
@@ -401,6 +408,8 @@
 
                 if (!result.IsSuccess)
                 {
+                    stopwatch.Stop();
+                    ProcessElapsedSeconds = Math.Round(stopwatch.Elapsed.TotalSeconds, 2);
                     await JSRuntime.InvokeVoidAsync("alert", $"Parça {chunkNumber} işlenirken hata oluştu:\n{result.ErrorMessage}");
                     StatusMessage = $"Hata: {result.ErrorMessage}";
                     return;
@@ -419,6 +428,9 @@
                 }
             }
 
+            stopwatch.Stop();
+            ProcessElapsedSeconds = Math.Round(stopwatch.Elapsed.TotalSeconds, 2);
+
             OutputText = TextChunkerService.RecombineChunks(chunks);
 
             int totalWords = InputWordCount;
@@ -429,8 +441,8 @@
             var usage = await QuotaManagerService.GetUsageAsync();
             DailyRequestCount = usage.GunlukIstekSayisi;
 
-            StatusMessage = "Düzenleme başarıyla tamamlandı!";
-            ProgressDetailText = $"İşlenen Parça: {totalChunks} | Kullanılan Token: ~{totalTokensUsed}";
+            StatusMessage = $"Düzenleme {ProcessElapsedSeconds:0.00} saniyede başarıyla tamamlandı!";
+            ProgressDetailText = $"⏱ Süre: {ProcessElapsedSeconds:0.00} sn | İşlenen Parça: {totalChunks} | Kullanılan Token: ~{totalTokensUsed}";
         }
         catch (OperationCanceledException)
         {
