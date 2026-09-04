@@ -78,9 +78,6 @@ namespace AkilliMetinDuzenleyici.Services
             int maxRetries = 2;
             int currentRetry = 0;
 
-            int estimatedPromptTokens = (inputText.Length / 3) + (settings.SystemPrompt?.Length / 3 ?? 500);
-            int safeMaxTokens = Math.Min(3500, Math.Max(1024, estimatedPromptTokens + 500));
-
             while (true)
             {
                 cancellationToken.ThrowIfCancellationRequested();
@@ -106,7 +103,7 @@ namespace AkilliMetinDuzenleyici.Services
                     {
                         temperature = settings.Temperature,
                         topP = 0.95,
-                        maxOutputTokens = safeMaxTokens
+                        maxOutputTokens = 8192
                     }
                 };
 
@@ -159,6 +156,22 @@ namespace AkilliMetinDuzenleyici.Services
                             PromptTokens = promptTokens,
                             CompletionTokens = completionTokens,
                             TotalTokens = promptTokens + completionTokens
+                        };
+                    }
+                    else if (response.StatusCode == HttpStatusCode.TooManyRequests)
+                    {
+                        currentRetry++;
+                        if (currentRetry <= maxRetries)
+                        {
+                            statusCallback?.Invoke($"Google Gemini istek sınırı (HTTP 429). {currentRetry * 2} saniye bekleniyor...");
+                            await Task.Delay(TimeSpan.FromSeconds(currentRetry * 2), cancellationToken);
+                            continue;
+                        }
+
+                        return new GroqApiResult
+                        {
+                            IsSuccess = false,
+                            ErrorMessage = "Google Gemini API İstek Sınırı Aşıldı (HTTP 429 Rate Limit). Lütfen birkaç saniye bekleyip tekrar deneyin veya hızlı Groq Cloud seçeneğini kullanın."
                         };
                     }
                     else
@@ -246,7 +259,7 @@ namespace AkilliMetinDuzenleyici.Services
             int currentRetry = 0;
 
             int estimatedPromptTokens = (inputText.Length / 3) + (settings.SystemPrompt?.Length / 3 ?? 500);
-            int safeMaxTokens = Math.Min(3500, Math.Max(1024, estimatedPromptTokens + 500));
+            int safeMaxTokens = Math.Min(4096, Math.Max(1024, estimatedPromptTokens + 1000));
 
             while (true)
             {
