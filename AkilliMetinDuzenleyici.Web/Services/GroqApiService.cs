@@ -44,23 +44,30 @@ namespace AkilliMetinDuzenleyici.Web.Services
                 };
             }
 
-            if (string.IsNullOrWhiteSpace(settings.ApiKey))
-            {
-                return new GroqApiResult
-                {
-                    IsSuccess = false,
-                    ErrorMessage = "API Key tanımlanmamış. Lütfen Ayarlar bölümünden API anahtarınızı girin."
-                };
-            }
-
             string provider = (settings.Provider ?? "groq").ToLowerInvariant();
 
             if (provider == "gemini")
             {
+                if (string.IsNullOrWhiteSpace(settings.GeminiApiKey))
+                {
+                    return new GroqApiResult
+                    {
+                        IsSuccess = false,
+                        ErrorMessage = "Google Gemini API Key tanımlanmamış. Lütfen Ayarlar bölümünden Gemini API anahtarınızı girin."
+                    };
+                }
                 return await CallGeminiNativeAsync(inputText, settings, statusCallback, cancellationToken);
             }
             else
             {
+                if (string.IsNullOrWhiteSpace(settings.GroqApiKey))
+                {
+                    return new GroqApiResult
+                    {
+                        IsSuccess = false,
+                        ErrorMessage = "Groq API Key tanımlanmamış. Lütfen Ayarlar bölümünden Groq API anahtarınızı girin."
+                    };
+                }
                 return await CallGroqOpenAiAsync(inputText, settings, statusCallback, cancellationToken);
             }
         }
@@ -71,13 +78,13 @@ namespace AkilliMetinDuzenleyici.Web.Services
             Action<string>? statusCallback,
             CancellationToken cancellationToken)
         {
-            string targetModel = string.IsNullOrWhiteSpace(settings.Model) || settings.Model.Contains("llama") || settings.Model.Contains("groq") || settings.Model.Contains("qwen")
-                ? "gemini-2.0-flash" 
-                : settings.Model;
+            string targetModel = string.IsNullOrWhiteSpace(settings.GeminiModel) || settings.GeminiModel.Contains("llama") || settings.GeminiModel.Contains("groq") || settings.GeminiModel.Contains("qwen")
+                ? "gemini-3.6-flash" 
+                : settings.GeminiModel;
 
-            string[] geminiFallbackChain = new[] { "gemini-2.0-flash", "gemini-1.5-flash", "gemini-2.0-flash-lite" };
+            string[] geminiFallbackChain = new[] { "gemini-3.6-flash", "gemini-2.0-flash", "gemini-1.5-flash" };
 
-            int maxRetries = 3;
+            int maxRetries = 2;
             int currentRetry = 0;
 
             int estimatedPromptTokens = (inputText.Length / 3) + (settings.SystemPrompt?.Length / 3 ?? 500);
@@ -87,7 +94,7 @@ namespace AkilliMetinDuzenleyici.Web.Services
             {
                 cancellationToken.ThrowIfCancellationRequested();
 
-                string apiKeyClean = settings.ApiKey.Trim();
+                string apiKeyClean = settings.GeminiApiKey.Trim();
                 string url = $"https://generativelanguage.googleapis.com/v1beta/models/{targetModel}:generateContent?key={apiKeyClean}";
 
                 var requestPayload = new
@@ -108,7 +115,7 @@ namespace AkilliMetinDuzenleyici.Web.Services
                     {
                         temperature = settings.Temperature,
                         topP = 0.95,
-                        maxOutputTokens = 8192
+                        maxOutputTokens = safeMaxTokens
                     }
                 };
 
@@ -166,9 +173,22 @@ namespace AkilliMetinDuzenleyici.Web.Services
                     else
                     {
                         string errorText = await response.Content.ReadAsStringAsync(cancellationToken);
+
+                        if (response.StatusCode == HttpStatusCode.Forbidden || 
+                            errorText.Contains("leaked") || 
+                            errorText.Contains("PERMISSION_DENIED") || 
+                            errorText.Contains("API_KEY_INVALID"))
+                        {
+                            return new GroqApiResult
+                            {
+                                IsSuccess = false,
+                                ErrorMessage = "Google Gemini API Anahtarınız geçersiz veya engellenmiş (Leaked Key). Lütfen aistudio.google.com adresinden ücretsiz yeni bir API anahtarı alıp Ayarlar menüsüne girin."
+                            };
+                        }
+
                         currentRetry++;
 
-                        if (currentRetry <= maxRetries && (response.StatusCode == HttpStatusCode.NotFound || response.StatusCode == HttpStatusCode.BadRequest || response.StatusCode == HttpStatusCode.TooManyRequests || errorText.Contains("404") || errorText.Contains("NOT_FOUND")))
+                        if (currentRetry <= maxRetries && (response.StatusCode == HttpStatusCode.NotFound || errorText.Contains("404") || errorText.Contains("NOT_FOUND")))
                         {
                             int currentIndex = Array.IndexOf(geminiFallbackChain, targetModel);
                             if (currentIndex >= 0 && currentIndex < geminiFallbackChain.Length - 1)
@@ -177,11 +197,11 @@ namespace AkilliMetinDuzenleyici.Web.Services
                             }
                             else
                             {
-                                targetModel = "gemini-2.0-flash";
+                                targetModel = "gemini-3.6-flash";
                             }
 
                             statusCallback?.Invoke($"Gemini Model Uyarısı. Otomatik aktif modele geçiliyor: '{targetModel}'...");
-                            await Task.Delay(500, cancellationToken);
+                            await Task.Delay(300, cancellationToken);
                             continue;
                         }
 
@@ -209,7 +229,7 @@ namespace AkilliMetinDuzenleyici.Web.Services
                     }
 
                     statusCallback?.Invoke($"Gemini bağlantı hatası, tekrar deneniyor ({currentRetry}/{maxRetries})...");
-                    await Task.Delay(TimeSpan.FromSeconds(2 * currentRetry), cancellationToken);
+                    await Task.Delay(TimeSpan.FromSeconds(currentRetry), cancellationToken);
                 }
             }
         }
@@ -220,17 +240,17 @@ namespace AkilliMetinDuzenleyici.Web.Services
             Action<string>? statusCallback,
             CancellationToken cancellationToken)
         {
-            string targetModel = string.IsNullOrWhiteSpace(settings.Model) || settings.Model.Contains("gemini")
-                ? "llama-3.3-70b-versatile" 
-                : settings.Model;
+            string targetModel = string.IsNullOrWhiteSpace(settings.GroqModel) || settings.GroqModel.Contains("gemini")
+                ? "qwen/qwen3.8-27b" 
+                : settings.GroqModel;
 
-            string endpoint = string.IsNullOrWhiteSpace(settings.Endpoint) || settings.Endpoint.Contains("googleapis.com") 
+            string endpoint = string.IsNullOrWhiteSpace(settings.GroqEndpoint) || settings.GroqEndpoint.Contains("googleapis.com") 
                 ? "https://api.groq.com/openai/v1/chat/completions" 
-                : settings.Endpoint;
+                : settings.GroqEndpoint;
 
-            string[] groqFallbackChain = new[] { "llama-3.3-70b-versatile", "llama-3.1-8b-instant", "qwen/qwen3.8-27b" };
+            string[] groqFallbackChain = new[] { "qwen/qwen3.8-27b", "llama-3.3-70b-versatile", "llama-3.1-8b-instant" };
 
-            int maxRetries = 3;
+            int maxRetries = 2;
             int currentRetry = 0;
 
             int estimatedPromptTokens = (inputText.Length / 3) + (settings.SystemPrompt?.Length / 3 ?? 500);
@@ -265,7 +285,7 @@ namespace AkilliMetinDuzenleyici.Web.Services
                 try
                 {
                     using var httpRequest = new HttpRequestMessage(HttpMethod.Post, endpoint);
-                    httpRequest.Headers.Authorization = new AuthenticationHeaderValue("Bearer", settings.ApiKey.Trim());
+                    httpRequest.Headers.Authorization = new AuthenticationHeaderValue("Bearer", settings.GroqApiKey.Trim());
                     httpRequest.Content = new StringContent(jsonBody, Encoding.UTF8, "application/json");
 
                     statusCallback?.Invoke($"Groq Cloud API ({targetModel}) sunucusuna istek gönderiliyor...");
@@ -350,11 +370,11 @@ namespace AkilliMetinDuzenleyici.Web.Services
                             }
                             else
                             {
-                                targetModel = "llama-3.3-70b-versatile";
+                                targetModel = "qwen/qwen3.8-27b";
                             }
 
                             statusCallback?.Invoke($"Model Uyarısı. Otomatik aktif modele geçiliyor: '{targetModel}'...");
-                            await Task.Delay(500, cancellationToken);
+                            await Task.Delay(300, cancellationToken);
                             continue;
                         }
 
@@ -382,7 +402,7 @@ namespace AkilliMetinDuzenleyici.Web.Services
                     }
 
                     statusCallback?.Invoke($"Groq bağlantı hatası, tekrar deneniyor ({currentRetry}/{maxRetries})...");
-                    await Task.Delay(TimeSpan.FromSeconds(2 * currentRetry), cancellationToken);
+                    await Task.Delay(TimeSpan.FromSeconds(currentRetry), cancellationToken);
                 }
             }
         }
