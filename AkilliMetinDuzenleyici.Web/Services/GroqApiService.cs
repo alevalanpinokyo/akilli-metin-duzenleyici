@@ -57,15 +57,6 @@ namespace AkilliMetinDuzenleyici.Web.Services
                         ErrorMessage = "Google Gemini API Key tanımlanmamış. Lütfen Ayarlar bölümünden Gemini API anahtarınızı girin."
                     };
                 }
-                if (!cleanGeminiKey.StartsWith("AIza"))
-                {
-                    string prefix = cleanGeminiKey.Substring(0, Math.Min(8, cleanGeminiKey.Length));
-                    return new GroqApiResult
-                    {
-                        IsSuccess = false,
-                        ErrorMessage = $"Girdiğiniz anahtar ('{prefix}...') bir Google Gemini API anahtarı değildir.\n\nGoogle Gemini API anahtarları her zaman 'AIza' ile başlar.\nLütfen https://aistudio.google.com/app/apikey adresinden ücretsiz 'AIza...' anahtarınızı alın."
-                    };
-                }
                 return await CallGeminiNativeAsync(inputText, settings, statusCallback, cancellationToken);
             }
             else
@@ -79,15 +70,6 @@ namespace AkilliMetinDuzenleyici.Web.Services
                         ErrorMessage = "Groq API Key tanımlanmamış. Lütfen Ayarlar bölümünden Groq API anahtarınızı girin."
                     };
                 }
-                if (!cleanGroqKey.StartsWith("gsk_"))
-                {
-                    string prefix = cleanGroqKey.Substring(0, Math.Min(8, cleanGroqKey.Length));
-                    return new GroqApiResult
-                    {
-                        IsSuccess = false,
-                        ErrorMessage = $"Girdiğiniz anahtar ('{prefix}...') bir Groq API anahtarı değildir.\n\nGroq API anahtarları her zaman 'gsk_' ile başlar.\nLütfen https://console.groq.com/keys adresinden ücretsiz 'gsk_...' anahtarınızı alın."
-                    };
-                }
                 return await CallGroqOpenAiAsync(inputText, settings, statusCallback, cancellationToken);
             }
         }
@@ -98,11 +80,11 @@ namespace AkilliMetinDuzenleyici.Web.Services
             Action<string>? statusCallback,
             CancellationToken cancellationToken)
         {
-            string targetModel = string.IsNullOrWhiteSpace(settings.GeminiModel) || settings.GeminiModel.Contains("llama") || settings.GeminiModel.Contains("groq") || settings.GeminiModel.Contains("qwen")
+            string targetModel = string.IsNullOrWhiteSpace(settings.GeminiModel) || settings.GeminiModel.Contains("llama") || settings.GeminiModel.Contains("groq") || settings.GeminiModel.Contains("qwen") || settings.GeminiModel.Contains("2.0") || settings.GeminiModel.Contains("1.5")
                 ? "gemini-3.6-flash" 
                 : settings.GeminiModel;
 
-            string[] geminiFallbackChain = new[] { "gemini-3.6-flash", "gemini-2.0-flash", "gemini-1.5-flash" };
+            string[] geminiFallbackChain = new[] { "gemini-3.6-flash", "gemini-3.5-flash", "gemini-flash-latest" };
 
             int maxRetries = 2;
             int currentRetry = 0;
@@ -198,19 +180,18 @@ namespace AkilliMetinDuzenleyici.Web.Services
                             response.StatusCode == HttpStatusCode.Unauthorized ||
                             errorText.Contains("leaked") || 
                             errorText.Contains("PERMISSION_DENIED") || 
-                            errorText.Contains("API_KEY_INVALID") ||
-                            errorText.Contains("INVALID_ARGUMENT"))
+                            errorText.Contains("API_KEY_INVALID"))
                         {
                             return new GroqApiResult
                             {
                                 IsSuccess = false,
-                                ErrorMessage = "Google Gemini API Anahtarınız geçersiz veya engellenmiş (Invalid/Blocked Key). Lütfen aistudio.google.com/app/apikey adresinden 'AIza...' ile başlayan ücretsiz yeni bir API anahtarı alıp Ayarlar menüsüne girin."
+                                ErrorMessage = "Google Gemini API Anahtarınız geçersiz veya engellenmiş (Invalid Key). Lütfen aistudio.google.com adresinden yeni bir API anahtarı alıp Ayarlar menüsüne girin."
                             };
                         }
 
                         currentRetry++;
 
-                        if (currentRetry <= maxRetries && (response.StatusCode == HttpStatusCode.NotFound || errorText.Contains("404") || errorText.Contains("NOT_FOUND")))
+                        if (currentRetry <= maxRetries && (response.StatusCode == HttpStatusCode.NotFound || errorText.Contains("404") || errorText.Contains("NOT_FOUND") || errorText.Contains("no longer available")))
                         {
                             int currentIndex = Array.IndexOf(geminiFallbackChain, targetModel);
                             if (currentIndex >= 0 && currentIndex < geminiFallbackChain.Length - 1)
