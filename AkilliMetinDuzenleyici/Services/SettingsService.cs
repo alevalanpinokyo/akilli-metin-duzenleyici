@@ -72,6 +72,20 @@ namespace AkilliMetinDuzenleyici.Services
 
             settings.Provider = (settings.Provider?.Trim() ?? "groq").ToLowerInvariant();
             
+            // Legacy JSON migration for old "api_key" property
+            if (!string.IsNullOrWhiteSpace(settings.LegacyApiKey))
+            {
+                string legacyKey = settings.LegacyApiKey.Trim();
+                if (legacyKey.StartsWith("gsk_") && string.IsNullOrWhiteSpace(settings.GroqApiKey))
+                {
+                    settings.GroqApiKey = legacyKey;
+                }
+                else if (legacyKey.StartsWith("AIza") && string.IsNullOrWhiteSpace(settings.GeminiApiKey))
+                {
+                    settings.GeminiApiKey = legacyKey;
+                }
+            }
+
             // Sanitize Groq settings
             settings.GroqApiKey = settings.GroqApiKey?.Trim() ?? string.Empty;
             if (string.IsNullOrWhiteSpace(settings.GroqEndpoint) || settings.GroqEndpoint.Contains("googleapis"))

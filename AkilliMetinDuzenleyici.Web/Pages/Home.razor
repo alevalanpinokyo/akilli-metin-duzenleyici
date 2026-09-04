@@ -147,27 +147,30 @@
                     </select>
                 </div>
 
-                <!-- API Key Box with Masking -->
-                <div style="background: var(--card-header-bg); padding: 12px; border-radius: 8px; border: 1px solid var(--border-color)">
-                    <label style="font-weight: 600; display: block; margin-bottom: 6px;">
-                        🔑 @(((TempSettings.Provider ?? "groq").ToLowerInvariant() == "gemini") ? "Google Gemini API Key:" : "Groq API Key:")
-                    </label>
-                    <div style="display: flex; gap: 8px;">
-                        @if ((TempSettings.Provider ?? "groq").ToLowerInvariant() == "gemini")
-                        {
-                            <input type="@(IsApiKeyVisible ? "text" : "password")" class="form-input" style="flex: 1;" @bind="TempSettings.GeminiApiKey" />
-                        }
-                        else
-                        {
-                            <input type="@(IsApiKeyVisible ? "text" : "password")" class="form-input" style="flex: 1;" @bind="TempSettings.GroqApiKey" placeholder="gsk_..." />
-                        }
-                        <button class="btn" @onclick="() => IsApiKeyVisible = !IsApiKeyVisible">
-                            @(IsApiKeyVisible ? "🔒 Gizle" : "👁 Göster")
+                <!-- API Keys Section (Ayrıştırılmış İki Ayrı Kutucuk) -->
+                <div style="background: var(--card-header-bg); padding: 14px; border-radius: 8px; border: 1px solid var(--border-color); display: flex; flex-direction: column; gap: 12px;">
+                    <div>
+                        <label style="font-weight: 600; display: block; margin-bottom: 4px; color: var(--text-primary);">
+                            ⚡ Groq Cloud API Key:
+                        </label>
+                        <input type="@(IsApiKeyVisible ? "text" : "password")" class="form-input" style="width: 100%;" @bind="TempSettings.GroqApiKey" placeholder="gsk_..." />
+                    </div>
+
+                    <div>
+                        <label style="font-weight: 600; display: block; margin-bottom: 4px; color: var(--text-primary);">
+                            ✨ Google Gemini API Key:
+                        </label>
+                        <input type="@(IsApiKeyVisible ? "text" : "password")" class="form-input" style="width: 100%;" @bind="TempSettings.GeminiApiKey" placeholder="AIza..." />
+                    </div>
+
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 2px;">
+                        <span style="font-size: 0.75rem; color: var(--text-secondary);">
+                            🔒 Her iki API anahtarı da tarayıcınızın hafızasında tamamen bağımsız saklanır.
+                        </span>
+                        <button class="btn" @onclick="() => IsApiKeyVisible = !IsApiKeyVisible" style="font-size: 0.8rem; padding: 4px 10px;">
+                            @(IsApiKeyVisible ? "🔒 Anahtarları Gizle" : "👁 Anahtarları Göster")
                         </button>
                     </div>
-                    <span style="font-size: 0.75rem; color: var(--text-secondary); display: block; margin-top: 4px;">
-                        🔒 API anahtarınız doğrudan tarayıcınızın yerel hafızasında saklanır.
-                    </span>
                 </div>
 
                 <!-- Model & Endpoint Selection -->
@@ -293,7 +296,7 @@
 
     private string NewPromptName { get; set; } = string.Empty;
     private string NewPromptContent { get; set; } = string.Empty;
-    private string BuildTimestamp { get; set; } = "04.09.2026 01:46:12";
+    private string BuildTimestamp { get; set; } = "04.09.2026 11:47:38";
     private CancellationTokenSource? _ccts;
 
     protected override void OnInitialized()

@@ -28,6 +28,10 @@ namespace AkilliMetinDuzenleyici.Models
         [JsonPropertyName("gemini_model")]
         public string GeminiModel { get; set; } = "gemini-3.6-flash";
 
+        // --- Legacy Migration Key ---
+        [JsonPropertyName("api_key")]
+        public string LegacyApiKey { get; set; } = string.Empty;
+
         // --- Active Provider Getters/Setters ---
         [JsonIgnore]
         public string ApiKey
