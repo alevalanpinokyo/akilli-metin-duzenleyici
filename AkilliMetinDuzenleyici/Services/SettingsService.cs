@@ -137,7 +137,7 @@ namespace AkilliMetinDuzenleyici.Services
                 }
             }
 
-            if (settings.MaxWordsPerChunk <= 0 || settings.MaxWordsPerChunk > 1000) settings.MaxWordsPerChunk = 600;
+            if (settings.MaxWordsPerChunk <= 0 || settings.MaxWordsPerChunk < 1000) settings.MaxWordsPerChunk = 1500;
             if (settings.DelayBetweenChunksMs < 0) settings.DelayBetweenChunksMs = 1500;
         }
 

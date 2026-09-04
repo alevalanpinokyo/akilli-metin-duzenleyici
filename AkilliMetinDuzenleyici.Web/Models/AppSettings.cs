@@ -20,7 +20,7 @@ namespace AkilliMetinDuzenleyici.Web.Models
 
         // --- Gemini Specific ---
         [JsonPropertyName("gemini_api_key")]
-        public string GeminiApiKey { get; set; } = "AIzaSyCbglc_iOFvDx1qBo8kPVs116XWGFZTE4s";
+        public string GeminiApiKey { get; set; } = string.Empty;
 
         [JsonPropertyName("gemini_endpoint")]
         public string GeminiEndpoint { get; set; } = "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent";
@@ -36,9 +36,7 @@ namespace AkilliMetinDuzenleyici.Web.Models
         [JsonIgnore]
         public string ApiKey
         {
-            get => (Provider ?? "groq").ToLowerInvariant() == "gemini" 
-                ? (string.IsNullOrWhiteSpace(GeminiApiKey) ? "AIzaSyCbglc_iOFvDx1qBo8kPVs116XWGFZTE4s" : GeminiApiKey)
-                : GroqApiKey;
+            get => (Provider ?? "groq").ToLowerInvariant() == "gemini" ? GeminiApiKey : GroqApiKey;
             set
             {
                 if ((Provider ?? "groq").ToLowerInvariant() == "gemini") GeminiApiKey = value;
@@ -151,7 +149,7 @@ KESİN KURALLAR:
         };
 
         [JsonPropertyName("max_words_per_chunk")]
-        public int MaxWordsPerChunk { get; set; } = 600;
+        public int MaxWordsPerChunk { get; set; } = 1500;
 
         [JsonPropertyName("delay_between_chunks_ms")]
         public int DelayBetweenChunksMs { get; set; } = 1500;
