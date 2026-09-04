@@ -37,7 +37,8 @@ namespace AkilliMetinDuzenleyici.Services
 
             if (provider == "gemini")
             {
-                if (string.IsNullOrWhiteSpace(settings.GeminiApiKey))
+                string cleanGeminiKey = settings.GeminiApiKey?.Trim() ?? string.Empty;
+                if (string.IsNullOrWhiteSpace(cleanGeminiKey))
                 {
                     return new GroqApiResult
                     {
@@ -45,16 +46,35 @@ namespace AkilliMetinDuzenleyici.Services
                         ErrorMessage = "Google Gemini API Key tanımlanmamış. Lütfen Ayarlar bölümünden Gemini API anahtarınızı girin."
                     };
                 }
+                if (!cleanGeminiKey.StartsWith("AIza"))
+                {
+                    string prefix = cleanGeminiKey.Substring(0, Math.Min(8, cleanGeminiKey.Length));
+                    return new GroqApiResult
+                    {
+                        IsSuccess = false,
+                        ErrorMessage = $"Girdiğiniz anahtar ('{prefix}...') bir Google Gemini API anahtarı değildir.\n\nGoogle Gemini API anahtarları her zaman 'AIza' ile başlar.\nLütfen https://aistudio.google.com/app/apikey adresinden ücretsiz 'AIza...' anahtarınızı alın."
+                    };
+                }
                 return await CallGeminiNativeAsync(inputText, settings, statusCallback, cancellationToken);
             }
             else
             {
-                if (string.IsNullOrWhiteSpace(settings.GroqApiKey))
+                string cleanGroqKey = settings.GroqApiKey?.Trim() ?? string.Empty;
+                if (string.IsNullOrWhiteSpace(cleanGroqKey))
                 {
                     return new GroqApiResult
                     {
                         IsSuccess = false,
                         ErrorMessage = "Groq API Key tanımlanmamış. Lütfen Ayarlar bölümünden Groq API anahtarınızı girin."
+                    };
+                }
+                if (!cleanGroqKey.StartsWith("gsk_"))
+                {
+                    string prefix = cleanGroqKey.Substring(0, Math.Min(8, cleanGroqKey.Length));
+                    return new GroqApiResult
+                    {
+                        IsSuccess = false,
+                        ErrorMessage = $"Girdiğiniz anahtar ('{prefix}...') bir Groq API anahtarı değildir.\n\nGroq API anahtarları her zaman 'gsk_' ile başlar.\nLütfen https://console.groq.com/keys adresinden ücretsiz 'gsk_...' anahtarınızı alın."
                     };
                 }
                 return await CallGroqOpenAiAsync(inputText, settings, statusCallback, cancellationToken);
@@ -164,14 +184,16 @@ namespace AkilliMetinDuzenleyici.Services
                         string errorText = await response.Content.ReadAsStringAsync(cancellationToken);
 
                         if (response.StatusCode == HttpStatusCode.Forbidden || 
+                            response.StatusCode == HttpStatusCode.Unauthorized ||
                             errorText.Contains("leaked") || 
                             errorText.Contains("PERMISSION_DENIED") || 
-                            errorText.Contains("API_KEY_INVALID"))
+                            errorText.Contains("API_KEY_INVALID") ||
+                            errorText.Contains("INVALID_ARGUMENT"))
                         {
                             return new GroqApiResult
                             {
                                 IsSuccess = false,
-                                ErrorMessage = "Google Gemini API Anahtarınız geçersiz veya engellenmiş (Leaked Key). Lütfen aistudio.google.com adresinden ücretsiz yeni bir API anahtarı alıp Ayarlar menüsüne girin."
+                                ErrorMessage = "Google Gemini API Anahtarınız geçersiz veya engellenmiş (Invalid/Blocked Key). Lütfen aistudio.google.com/app/apikey adresinden 'AIza...' ile başlayan ücretsiz yeni bir API anahtarı alıp Ayarlar menüsüne girin."
                             };
                         }
 
